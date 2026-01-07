@@ -18,12 +18,27 @@ WORKDIR /app
 RUN addgroup --gid ${USER_GID} ${USERNAME} && \
     adduser --uid $USER_UID --gid ${USER_GID} ${USERNAME}
 
-COPY --chown=appuser:appgroup  ./pyproject.toml ./README.md ./ 
+COPY --chown=root:root ./pyproject.toml ./README.md ./ 
+
+# Make code readable + traversable, but not writable by anyone.
+# - a=rX  : everyone gets read; directories (and already-exec files) get execute
+# - a-w   : remove write from user/group/other (including root as "owner" per mode bits)
+RUN chmod -R a=rX /app/ \
+ && chmod -R a-w  /app/
+# -----------------------------
+# 3) Create runtime-writable directories (keep them OUT of /app/src)
+# -----------------------------
+RUN mkdir -p /var/lib/app /tmp/app \
+ && chown -R ${USERNAME}:${USERNAME} /var/lib/app /tmp/app \
+ && chmod 700 /var/lib/app /tmp/app
+
 
 RUN pip install . && pip install --group dev --group test
 
-COPY --chown=appuser:appgroup  . ./ 
+
+COPY --chown=root:root . ./ 
+
 
 USER ${USERNAME} 
 
-CMD [ "uvicorn", "--reload","--host", "0.0.0.0","--app-dir", "src", "app.main:app" ]
+CMD [ "uvicorn","--host", "0.0.0.0","--app-dir", "src", "app.main:app" ]

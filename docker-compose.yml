@@ -1,0 +1,37 @@
+# version: "3"
+
+services:
+  app:
+    build:
+      context: ./be2
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./be2:/app
+    command: >
+      sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.main:app"
+    environment:
+      - DB_HOST=db
+      - DB_NAME=app
+      - DB_USER=postgres
+      - DB_PASS=supersecretpassword
+      - DJANGO_DEBUG=True
+      - S3_STORAGE_BACKEND=0
+    #depends_on:
+    #  # - db
+    #  db:
+    #    condition: service_healthy
+
+
+  #db:
+  #  image: postgres:15.1-alpine
+  #  environment:
+  #    - POSTGRES_DB=app
+  #    - POSTGRES_USER=postgres
+  #    - POSTGRES_PASSWORD=supersecretpassword
+  #  healthcheck:
+  #    test: ["CMD", "pg_isready", "-U", "postgres"]
+  #    interval: 10s
+  #    timeout: 5s
+  #    retries: 5
+
