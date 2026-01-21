@@ -41,7 +41,7 @@ class LangGraphAgent:
         if self.system:
             messages = [SystemMessage(content=self.system)] + messages
         message = self.model.invoke(messages)
-        return {"messages": message}
+        return {"messages": [message]}
 
     def execute_action(self, state: AgentState):
         tool_calls = state["messages"][-1].tool_calls
@@ -58,9 +58,3 @@ class LangGraphAgent:
     def exists_action(self, state: AgentState):
         result = state["messages"][-1]
         return len(result.tool_calls) > 0
-
-
-if __name__ == "__main__":
-    from langchain_google_genai import ChatGoogleGenerativeAI
-
-    model = ChatGoogleGenerativeAI(model=MODEL)
