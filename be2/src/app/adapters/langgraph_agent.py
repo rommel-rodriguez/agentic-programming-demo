@@ -58,3 +58,11 @@ class LangGraphAgent:
     def exists_action(self, state: AgentState):
         result = state["messages"][-1]
         return len(result.tool_calls) > 0
+
+    def query_stream(self, input_query: str | None):
+        messages = [HumanMessage(content=input_query)]
+        thread = {"configurable": {"thread_id": "1"}}
+
+        for event in self.graph.stream({"messages": messages}, thread):
+            for v in event.values():
+                logger.info(v["messages"])
