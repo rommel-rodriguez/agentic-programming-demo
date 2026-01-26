@@ -10,13 +10,15 @@ services:
       - ./be2:/app
     command: >
       sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.main:app"
-    environment:
-      - DB_HOST=db
-      - DB_NAME=app
-      - DB_USER=postgres
-      - DB_PASS=supersecretpassword
-      - DJANGO_DEBUG=True
-      - S3_STORAGE_BACKEND=0
+    env_file:
+      - ./.env
+    # environment:
+    #   - DB_HOST=db
+    #   - DB_NAME=app
+    #   - DB_USER=postgres
+    #   - DB_PASS=supersecretpassword
+    #   - DJANGO_DEBUG=True
+    #   - S3_STORAGE_BACKEND=0
     #depends_on:
     #  # - db
     #  db:
