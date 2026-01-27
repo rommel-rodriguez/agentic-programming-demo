@@ -33,6 +33,8 @@ RUN mkdir -p /var/lib/app /tmp/app \
  && chmod 700 /var/lib/app /tmp/app
 
 
+# TODO: Modify this later so that the dev and test depencies are not installed for the
+# production build.
 RUN pip install . && pip install --group dev --group test
 
 
