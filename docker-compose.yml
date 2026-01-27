@@ -3,11 +3,11 @@
 services:
   app:
     build:
-      context: ./be2
+      context: ./langgraph-demo
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
-      - ./be2:/app
+      - ./langgraph-demo:/app
     command: >
       sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.main:app"
     env_file:
