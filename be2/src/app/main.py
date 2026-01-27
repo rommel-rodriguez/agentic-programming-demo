@@ -1,21 +1,13 @@
 import logging
 from pathlib import Path
 
-from langchain_core.messages import (
-    AIMessage,
-    AnyMessage,
-    HumanMessage,
-    SystemMessage,
-    ToolMessage,
-)
+from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
 from langgraph.checkpoint.sqlite import SqliteSaver
 
 from app.adapters.langgraph_agent import LangGraphAgent
-from app.config import settings
-
-# from app import bootstrap, config
+from app.config import settings  # type:ignore
 from app.entrypoints import webapp
 
 tool = TavilySearch(max_results=2, tavily_api_key=settings.tavily_api_key)
@@ -48,46 +40,6 @@ CHUNK_SIZE = 1 * 1024 * 1024  # 1 MiB
 d1 = {"key1": 12, "key2": "Aufwiedersehen"}
 
 logger = logging.getLogger(__name__)
-
-
-@app.get("/test-string")
-def test_endpoint():
-    logger.info("test-string endpoint aufwiedersehen")
-    return "Hallo FastAPI world!"
-
-
-@app.get("/test-dict")
-def test_dictionary():
-    logger.error("test-dict endpoint triggered")
-    return d1
-
-
-@app.get("/test-debug")
-def test_debug():
-    logger.debug("Is this printed while in INFO logger level?")
-    return d1
-
-
-@app.get("/test-warning")
-def test_warning():
-    logger.warning("Is this Warning logged at INFO level logger?")
-    return d1
-
-
-@app.get("/test-exception")
-def test_exception():
-    def divide(a, b):
-        try:
-            result = a / b
-        except ZeroDivisionError:
-            logger.exception("Hey Ho!")
-        except TypeError:
-            logger.exception("hey TE!")
-        else:
-            return result
-
-    result = divide(1, 0)
-    return result
 
 
 @app.get("/query-lgmodel")
