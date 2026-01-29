@@ -24,7 +24,7 @@ class AgentState(TypedDict):
 class LangGraphAgent:
     def __init__(self, model, tools, checkpointer, thread_id: str, system: str = ""):
         self.system = system
-        self.model = model.bind_tools(tools)  ## NOTE: Different for Gemini
+        self.model = model.bind_tools(tools)
         self.thread_id = thread_id
         graph_builder = StateGraph(AgentState)
         graph_builder.add_node("llm", self.call_model)
