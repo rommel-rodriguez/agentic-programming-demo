@@ -6,6 +6,7 @@ from langgraph.checkpoint.sqlite import SqliteSaver
 
 from app.adapters.langgraph_agent import LangGraphAgent
 from app.config import settings  # type:ignore
+from app.entrypoints.webapp.models.workflows import LGQuery
 
 tool = TavilySearch(max_results=2, tavily_api_key=settings.tavily_api_key)
 # memory = SqliteSaver.from_conn_string(":memory:")
@@ -26,7 +27,7 @@ messages = [HumanMessage(content="What is the weather in San Francisco?")]
 router = APIRouter()
 
 
-@router.get("/query-lgmodel")
+@router.get("/query-lgmodel", response_model=LGQuery)
 async def query_lgmodel(query: str):
     agent_state = None
     with SqliteSaver.from_conn_string(":memory:") as memory:
