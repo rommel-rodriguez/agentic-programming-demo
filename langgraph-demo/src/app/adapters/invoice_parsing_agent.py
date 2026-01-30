@@ -22,24 +22,30 @@ class AgentState(TypedDict):
 
 
 class InvoiceAgentState(TypedDict):
-    task: str
-    plan: str
-    draft: str
-    critique: str
+    invoice_structure: str
+    invoice_image: bytes
     content: list[str]
     revision_number: int
     max_revisions: int
 
 
 class InvoiceParsingAgent:
-    def __init__(self, model, tools, checkpointer, thread_id: str, system: str = ""):
+    def __init__(
+        self,
+        model,
+        tools,
+        checkpointer,
+        thread_id: str,
+        invoice_bytes: bytes,
+        system: str = "",
+    ):
         self.system = system
         self.model = model.bind_tools(tools)
         self.thread_id = thread_id
         graph_builder = StateGraph(AgentState)
         graph_builder.add_node("llm", self.call_model)
         graph_builder.add_conditional_edges(
-            "llm", self.exists_action, {True: "action", False: END}
+            "llm", self.is_valid_json, {True: "action", False: END}
         )
         graph_builder.add_node("action", self.execute_action)
         graph_builder.add_edge("action", "llm")
@@ -66,7 +72,7 @@ class InvoiceParsingAgent:
         logger.info(f"Finished executing action/s. Going back to the model")
         return {"messages": results}
 
-    def exists_action(self, state: AgentState):
+    def is_valid_json(self, state: AgentState):
         result = state["messages"][-1]
         return len(result.tool_calls) > 0
 
