@@ -45,7 +45,6 @@ class InvoiceParsingAgent:
         graph_builder.add_conditional_edges(
             "llm", self.is_valid_json, {True: END, False: "reflection"}
         )
-        graph_builder.add_edge("action", "llm")
         graph_builder.set_entry_point("llm")
         self.graph = graph_builder.compile(checkpointer=checkpointer)
         self.tools = {t.name: t for t in tools}
@@ -59,10 +58,11 @@ class InvoiceParsingAgent:
         if self.system:
             messages = [SystemMessage(content=self.system), *messages]  # type: ignore
         result = self.model.invoke(messages)
+        logger.info(f"Called llm start node and got: {result}")
         if not result.content:
             logger.error(f"JSON string not returned by the LLM, response:\n{result}")
-        invoice_json = result.content | None
-        return {"revision_number": 1, "invoice_json": result}
+        invoice_json = result.content
+        return {"revision_number": 1, "invoice_json": result.content}
 
     def reflection(self, state: InvoiceAgentState):
         # TODO: Need some kind of stopping condition here in order for it not to loop
@@ -71,7 +71,7 @@ class InvoiceParsingAgent:
         invoice_json = state["invoice_json"]
         revision_number: int = state["revision_number"]
         max_revisions: int = state["max_revisions"]
-        logger.debug(
+        logger.info(
             f"Inside the reflection node, revision: {revision_number}"
             ", invoice_json: {invoice_json}"
         )
@@ -91,7 +91,7 @@ class InvoiceParsingAgent:
         # NOTE: Does this even work if there is not "human" message?
         messages = [SystemMessage(content=reflection_prompt)]
         ai_message = self.model.invoke(messages)
-        invoice_json = ai_message.content | None
+        invoice_json = ai_message.content
         return {"revision_number": revision_number + 1, "invoice_json": invoice_json}
 
     def is_valid_json(self, state: InvoiceAgentState):
@@ -102,7 +102,7 @@ class InvoiceParsingAgent:
         try:
             json.loads(result)
         except (ValueError, json.JSONDecodeError) as e:
-            logger.error(f"raised while trying to parse json output {e}")
+            logger.error(f"Raised while trying to parse json output {e}")
             return False
         return True
 
