@@ -1,3 +1,4 @@
+import json
 import logging
 import operator
 from typing import Annotated, TypedDict
@@ -17,13 +18,10 @@ logger = logging.getLogger(__name__)
 MODEL = "gemini-2.5-flash"
 
 
-class AgentState(TypedDict):
-    messages: Annotated[list[AnyMessage], operator.add]
-
-
 class InvoiceAgentState(TypedDict):
-    invoice_structure: str
-    invoice_image: bytes
+    invoice_text: str
+    invoice_json: str
+    # invoice_image: bytes
     content: list[str]
     revision_number: int
     max_revisions: int
@@ -36,51 +34,82 @@ class InvoiceParsingAgent:
         tools,
         checkpointer,
         thread_id: str,
-        invoice_bytes: bytes,
         system: str = "",
     ):
         self.system = system
         self.model = model.bind_tools(tools)
         self.thread_id = thread_id
-        graph_builder = StateGraph(AgentState)
+        graph_builder = StateGraph(InvoiceAgentState)
         graph_builder.add_node("llm", self.call_model)
+        graph_builder.add_node("reflection", self.reflection)
         graph_builder.add_conditional_edges(
-            "llm", self.is_valid_json, {True: "action", False: END}
+            "llm", self.is_valid_json, {True: END, False: "reflection"}
         )
-        graph_builder.add_node("action", self.execute_action)
         graph_builder.add_edge("action", "llm")
         graph_builder.set_entry_point("llm")
         self.graph = graph_builder.compile(checkpointer=checkpointer)
         self.tools = {t.name: t for t in tools}
 
-    def call_model(self, state: AgentState):
-        messages = state["messages"]
+    def call_model(self, state: InvoiceAgentState):
+        invoice_text = state["invoice_text"]
+
+        messages = [
+            HumanMessage(content=f"{invoice_text}"),
+        ]
         if self.system:
-            messages = [SystemMessage(content=self.system)] + messages
-        message = self.model.invoke(messages)
-        return {"messages": [message]}
+            messages = [SystemMessage(content=self.system), *messages]  # type: ignore
+        result = self.model.invoke(messages)
+        if not result.content:
+            logger.error(f"JSON string not returned by the LLM, response:\n{result}")
+        invoice_json = result.content | None
+        return {"revision_number": 1, "invoice_json": result}
 
-    def execute_action(self, state: AgentState):
-        tool_calls = state["messages"][-1].tool_calls
-        results = []
-        for t in tool_calls:
-            logger.info(f"Calling {t}")
-            result = self.tools[t["name"]].invoke(t["args"])
-            results.append(
-                ToolMessage(tool_call_id=t["id"], name=t["name"], content=str(result))
-            )
-        logger.info(f"Finished executing action/s. Going back to the model")
-        return {"messages": results}
+    def reflection(self, state: InvoiceAgentState):
+        # TODO: Need some kind of stopping condition here in order for it not to loop
+        # forever by making use of max_revisions
+        invoice_text = state["invoice_text"]
+        invoice_json = state["invoice_json"]
+        revision_number: int = state["revision_number"]
+        max_revisions: int = state["max_revisions"]
+        logger.debug(
+            f"Inside the reflection node, revision: {revision_number}"
+            ", invoice_json: {invoice_json}"
+        )
+        # TODO: Needs a specialized system prompt to correct format mistakes in the JSON
+        # string
+        reflection_prompt = f"""You are an specialized agent that checks for errors in \
+        what is supposed to be a valid JSON-formatted string, which came from an \
+        invoice. The JSON format shows an error of some kind, and the desired output \
+        is a correctly-JSON-formatted version of the JSON string. \
+        As context you have the following: \
+        invoice as text: \
+        {invoice_text}
+        invoice as JSON: \
+        {invoice_json}
+        IMPORTANT: Only return a valid JSON string, DO NOT return anything else.
+        """
+        # NOTE: Does this even work if there is not "human" message?
+        messages = [SystemMessage(content=reflection_prompt)]
+        ai_message = self.model.invoke(messages)
+        invoice_json = ai_message.content | None
+        return {"revision_number": revision_number + 1, "invoice_json": invoice_json}
 
-    def is_valid_json(self, state: AgentState):
-        result = state["messages"][-1]
-        return len(result.tool_calls) > 0
+    def is_valid_json(self, state: InvoiceAgentState):
+        result = state["invoice_json"][-1]
+        if not result:
+            return False
 
-    def query_stream(self, input_query: str | None):
-        messages = [HumanMessage(content=input_query)]
+        try:
+            json.loads(result)
+        except (ValueError, json.JSONDecodeError) as e:
+            logger.error(f"raised while trying to parse json output {e}")
+            return False
+        return True
+
+    def query_stream(self, invoice_text: str | None):
         thread = {"configurable": {"thread_id": self.thread_id}}
 
-        for event in self.graph.stream({"messages": messages}, thread):
+        for event in self.graph.stream({"invoice_text": invoice_text}, thread):
             for v in event.values():
                 logger.info(v["messages"])
 
