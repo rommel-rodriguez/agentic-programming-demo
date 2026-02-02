@@ -111,6 +111,8 @@ class InvoiceParsingAgent:
 
         for event in self.graph.stream({"invoice_text": invoice_text}, thread):
             for v in event.values():
-                logger.info(v["messages"])
+                logger.info(
+                    f"revison: {v['revision_number']}, json: {v['invoice_json']}"
+                )
 
         return self.graph.get_state(thread)
