@@ -13,6 +13,8 @@ from langchain_core.messages import (
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 
+from app.utils.ai import ai_json_string_strip_tags, ai_json_string_to_dict
+
 logger = logging.getLogger(__name__)
 
 MODEL = "gemini-2.5-flash"
@@ -21,6 +23,7 @@ MODEL = "gemini-2.5-flash"
 class InvoiceAgentState(TypedDict):
     invoice_text: str
     invoice_json: str
+    invoice_dict: str
     # invoice_image: bytes
     content: list[str]
     revision_number: int
@@ -39,11 +42,15 @@ class InvoiceParsingAgent:
         self.system = system
         self.model = model.bind_tools(tools)
         self.thread_id = thread_id
+        self.max_revisions = 3
         graph_builder = StateGraph(InvoiceAgentState)
         graph_builder.add_node("llm", self.call_model)
         graph_builder.add_node("reflection", self.reflection)
         graph_builder.add_conditional_edges(
             "llm", self.is_valid_json, {True: END, False: "reflection"}
+        )
+        graph_builder.add_conditional_edges(
+            "reflection", self.should_continue, {True: "reflection", False: END}
         )
         graph_builder.set_entry_point("llm")
         self.graph = graph_builder.compile(checkpointer=checkpointer)
@@ -61,16 +68,21 @@ class InvoiceParsingAgent:
         logger.info(f"Called llm start node and got: {result}")
         if not result.content:
             logger.error(f"JSON string not returned by the LLM, response:\n{result}")
-        invoice_json = result.content
-        return {"revision_number": 1, "invoice_json": result.content}
+
+        invoice_json = ai_json_string_strip_tags(result.content)
+        return {"revision_number": 1, "invoice_json": invoice_json}
 
     def reflection(self, state: InvoiceAgentState):
-        # TODO: Need some kind of stopping condition here in order for it not to loop
-        # forever by making use of max_revisions
         invoice_text = state["invoice_text"]
         invoice_json = state["invoice_json"]
         revision_number: int = state["revision_number"]
         max_revisions: int = state["max_revisions"]
+        # if revision_number >= max_revisions:
+        #     logger.warning(
+        #         "Max revisions reached (%s); returning last JSON without retry.",
+        #         max_revisions,
+        #     )
+        #     return {"revision_number": revision_number, "invoice_json": invoice_json}
         logger.info(
             f"Inside the reflection node, revision: {revision_number}"
             ", invoice_json: {invoice_json}"
@@ -89,18 +101,35 @@ class InvoiceParsingAgent:
         IMPORTANT: Only return a valid JSON string, DO NOT return anything else.
         """
         # NOTE: Does this even work if there is not "human" message?
-        messages = [SystemMessage(content=reflection_prompt)]
+        messages = [
+            SystemMessage(
+                content="You are a JSON-fixing assistant. Return only valid JSON."
+            ),
+            HumanMessage(content=reflection_prompt),
+        ]
         ai_message = self.model.invoke(messages)
         invoice_json = ai_message.content
         return {"revision_number": revision_number + 1, "invoice_json": invoice_json}
 
+    def should_continue(self, state: InvoiceAgentState):
+        revision_number = state["revision_number"]
+        max_revisions = state["max_revisions"]
+
+        ok_to_continue: bool = revision_number < max_revisions
+        if not ok_to_continue:
+            logger.warning(
+                f"Stopping because max revisions have been reached, JSON output:\n{state['invoice_json']}"
+            )
+
+        return (revision_number < max_revisions) and not self.is_valid_json(state)
+
     def is_valid_json(self, state: InvoiceAgentState):
-        result = state["invoice_json"][-1]
+        result = state["invoice_json"]
         if not result:
             return False
 
         try:
-            json.loads(result)
+            ai_json_string_to_dict(result)
         except (ValueError, json.JSONDecodeError) as e:
             logger.error(f"Raised while trying to parse json output {e}")
             return False
@@ -109,7 +138,9 @@ class InvoiceParsingAgent:
     def query_stream(self, invoice_text: str | None):
         thread = {"configurable": {"thread_id": self.thread_id}}
 
-        for event in self.graph.stream({"invoice_text": invoice_text}, thread):
+        for event in self.graph.stream(
+            {"invoice_text": invoice_text, "max_revisions": self.max_revisions}, thread
+        ):
             for v in event.values():
                 logger.info(
                     f"revison: {v['revision_number']}, json: {v['invoice_json']}"
