@@ -47,6 +47,7 @@ LOG_CONFIG = {
         }
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
+    "loggers": {"uvicorn": {"handlers": ["console"], "level": "INFO"}},
 }
 
 
