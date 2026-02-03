@@ -1,8 +1,12 @@
 import logging
 from pathlib import Path
 
-from app.config import settings  # type:ignore
+from app.config import configure_logging, settings  # type:ignore
 from app.entrypoints.webapp.app import fapi_app
+
+# NOTE: Is it correct to configure logging here? Or just at the entrypoints where
+# it was suggested before?
+configure_logging()
 
 app = fapi_app
 
