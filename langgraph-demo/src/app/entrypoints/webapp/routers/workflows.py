@@ -1,4 +1,6 @@
-from fastapi import APIRouter
+import logging
+
+from fastapi import APIRouter, HTTPException
 from langchain_core.messages import HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
@@ -8,6 +10,7 @@ from app.adapters.langgraph_agent import LangGraphAgent
 from app.config import settings  # type:ignore
 from app.entrypoints.webapp.models.workflows import LGQuery
 
+logger = logging.getLogger(__name__)
 tool = TavilySearch(max_results=2, tavily_api_key=settings.tavily_api_key)
 # memory = SqliteSaver.from_conn_string(":memory:")
 prompt = """You are a smart research assistant. Use the search engine to look up information. \
@@ -29,6 +32,7 @@ router = APIRouter()
 
 @router.get("/query-lgmodel", response_model=LGQuery)
 async def query_lgmodel(query: str):
+    logger.info("Langgraph test endpoint reached")
     agent_state = None
     with SqliteSaver.from_conn_string(":memory:") as memory:
         abot = LangGraphAgent(
@@ -37,6 +41,10 @@ async def query_lgmodel(query: str):
         agent_state = abot.query_stream(query)
 
     result = agent_state.values["messages"][-1].text
+    logger.debug(f"Query output: {result}")
     if not result:
-        pass  # NOTE: Raise/return some error here.
+        logger.error(f"Did not get a result text back, result: {result}")
+        raise HTTPException(
+            status_code=404, detail="The agent did not return a valid response"
+        )
     return {"result": result}
