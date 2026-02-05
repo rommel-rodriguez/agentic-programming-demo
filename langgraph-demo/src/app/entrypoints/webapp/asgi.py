@@ -1,18 +1,3 @@
-from contextlib import asynccontextmanager
+from app.bootstrap.app_factory import create_app
 
-from fastapi import FastAPI
-
-from app.config import configure_logging
-
-from .routers.workflows import router as wf_router
-
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    configure_logging()
-    yield
-
-
-app = FastAPI(lifespan=lifespan)
-
-app.include_router(wf_router)
+app = create_app()
