@@ -43,4 +43,4 @@ COPY --chown=root:root . ./
 
 USER ${USERNAME} 
 
-CMD [ "uvicorn","--host", "0.0.0.0","--app-dir", "src", "app.main:app" ]
+CMD [ "uvicorn","--host", "0.0.0.0","--app-dir", "src", "app.entrypoints.webapp.asgi:app" ]

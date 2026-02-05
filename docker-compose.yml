@@ -9,7 +9,7 @@ services:
     volumes:
       - ./langgraph-demo:/app
     command: >
-      sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.main:app"
+      sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.entrypoints.webapp.asgi:app"
     env_file:
       - ./.env
     # environment:
