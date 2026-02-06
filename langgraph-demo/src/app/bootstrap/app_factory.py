@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from app.config import configure_logging
+from app.bootstrap.logging import configure_logging
 from app.entrypoints.webapp.routers.workflows import router as wf_router
 
 
