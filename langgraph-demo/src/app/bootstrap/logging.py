@@ -25,7 +25,21 @@ LOG_CONFIG = {
         }
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
-    "loggers": {"uvicorn": {"handlers": ["console"], "level": "INFO"}},
+    "loggers": {
+        # NOTE: Not a good practice to set a handler per logger, this is just a
+        # workaround in order not to get so many DEBUG level messages from the
+        # listed third-party library loggers. It would be better to find a way to
+        # simplify this this.
+        "uvicorn": {"handlers": ["console"], "level": "INFO"},
+        "uvicorn.error": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "uvicorn.access": {
+            "handlers": ["console"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "httpcore": {"handlers": ["console"], "level": "INFO", "propagate": False},
+        "urllib3": {"handlers": ["console"], "level": "INFO", "propagate": False},
+    },
 }
 
 
