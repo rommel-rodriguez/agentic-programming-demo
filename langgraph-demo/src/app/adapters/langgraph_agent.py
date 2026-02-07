@@ -45,10 +45,12 @@ class LangGraphAgent:
         return {"messages": [message]}
 
     def execute_action(self, state: AgentState):
+        logger.debug("Inside the 'action' node")
         tool_calls = state["messages"][-1].tool_calls
         results = []
         for t in tool_calls:
-            logger.info(f"Calling {t}")
+            logger.info(f"Executing the {t['name']} tool")
+            logger.debug(f"{t['name']} args: {t['args']}")
             result = self.tools[t["name"]].invoke(t["args"])
             results.append(
                 ToolMessage(tool_call_id=t["id"], name=t["name"], content=str(result))
