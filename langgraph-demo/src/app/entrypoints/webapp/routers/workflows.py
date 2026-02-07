@@ -43,7 +43,6 @@ async def query_lgmodel(query: str):
     result = agent_state.values["messages"][-1].text
     logger.debug(f"Query output: {result}")
     if not result:
-        logger.error(f"Did not get a result text back, result: {result}")
         raise HTTPException(
             status_code=404, detail="The agent did not return a valid response"
         )
