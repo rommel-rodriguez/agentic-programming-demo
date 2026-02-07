@@ -1,6 +1,7 @@
 import logging
 from contextlib import asynccontextmanager
 
+from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, HTTPException
 from fastapi.exception_handlers import http_exception_handler
 
@@ -23,6 +24,7 @@ async def http_exception_handle_logging(request, exc):
 
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
+    app.add_middleware(CorrelationIdMiddleware)
     app.include_router(wf_router)
     app.add_exception_handler(HTTPException, http_exception_handle_logging)
     return app

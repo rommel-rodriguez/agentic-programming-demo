@@ -12,9 +12,17 @@ if settings.env == "dev":
 LOG_CONFIG = {
     "version": 1,
     "disable_existing_loggers": False,
+    "filters": {
+        "correlation_id": {
+            "()": "asgi_correlation_id.CorrelationIdFilter",
+            # "uuid_length": 8 if isinstance(config, DevConfig) else 32,
+            "uuid_length": 8 if settings.env == "dev" else 32,
+            "default_value": "-",
+        }
+    },
     "formatters": {
         "standard": {
-            "format": "%(asctime)s::%(levelname)-08s::%(name)s:%(lineno)d::%(message)s"
+            "format": "%(asctime)s::%(correlation_id)s::%(levelname)-08s::%(name)s:%(lineno)d::%(message)s"
         }
     },
     "handlers": {
@@ -22,6 +30,7 @@ LOG_CONFIG = {
             "class": "logging.StreamHandler",
             "formatter": "standard",
             "level": LOG_LEVEL,
+            "filters": ["correlation_id"],
         }
     },
     "root": {"handlers": ["console"], "level": LOG_LEVEL},
