@@ -22,7 +22,8 @@ LOG_CONFIG = {
     },
     "formatters": {
         "standard": {
-            "format": "%(asctime)s::%(correlation_id)s::%(levelname)-08s::%(name)s:%(lineno)d::%(message)s"
+            "class": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(correlation_id)s %(levelname)-08s %(name)s %(lineno)d %(message)s",
         }
     },
     "handlers": {
