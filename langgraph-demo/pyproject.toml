@@ -25,6 +25,7 @@ dependencies = [
     "dishka==1.7.2",
     "fastapi-error-map==0.9.8",
     "fastapi[standard]==0.121.0",
+    "asgi-correlation-id",
     "python-multipart",
     "orjson==3.11.4",
     "psycopg[binary]==3.2.12",
