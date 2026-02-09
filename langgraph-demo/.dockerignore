@@ -107,3 +107,7 @@ pnpm-debug.log*
 ehthumbs.db
 Thumbs.db
 desktop.ini
+
+# Allow tests in build context for CI/test images
+!tests/
+!tests/**
