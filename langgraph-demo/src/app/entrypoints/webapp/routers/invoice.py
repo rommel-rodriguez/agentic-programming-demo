@@ -9,7 +9,7 @@ from app.entrypoints.webapp.models.invoice import (
     UploadInitOut,
 )
 
-router = APIRouter(prefix="/invoice", tags=["agent-workflows", "invoice-parsing"])
+router = APIRouter(tags=["agent-workflows", "invoice-parsing"])
 
 
 @router.post("/attachments/init", response_model=UploadInitOut)

@@ -27,7 +27,7 @@ model.google_api_key = settings.gemini_api_key
 messages = [HumanMessage(content="What is the weather in San Francisco?")]
 
 
-router = APIRouter(prefix="/wf", tags=["agent-workflows"])
+router = APIRouter(tags=["agent-workflows"])
 
 
 @router.get("/query-lgmodel", response_model=LGQuery)
