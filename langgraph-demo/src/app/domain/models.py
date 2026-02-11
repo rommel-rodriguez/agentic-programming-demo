@@ -28,3 +28,4 @@ class Invoice:
     currency: str
     emission_date: date
     due_date: date
+    hash: bytes
