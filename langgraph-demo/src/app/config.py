@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     # )
 
     # debug: bool = False
-    # database_url: Union[PostgresDsn, None] = None
+    db_url: Union[PostgresDsn, None] = None
     env: str = "prod"
     tavily_api_key: str = ""
     gemini_api_key: SecretStr
