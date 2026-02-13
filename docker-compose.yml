@@ -21,7 +21,8 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
-      DB_URL: postgresql://${DB_USER}:${DB_PASS}@${DB_HOST}:${DB_PORT}/${DB_NAME}
+      DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+
     depends_on:
       psdb:
         condition: service_healthy
@@ -31,16 +32,16 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - psdb_data:/var/lib/postgresql/data
+      - psdb_data:/var/lib/postgresql
     env_file:
       - ./.env
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_DB: ${POSTGRES_DB}
-      PGDATA: ${PGDATA}
-      POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS}
-      POSTGRES_INITDB_WALDIR: ${POSTGRES_INITDB_WALDIR}
+      # PGDATA: ${PGDATA}
+      # POSTGRES_INITDB_ARGS: ${POSTGRES_INITDB_ARGS}
+      # POSTGRES_INITDB_WALDIR: ${POSTGRES_INITDB_WALDIR}
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB} -h 127.0.0.1 -p 5432"]
       interval: 5s
