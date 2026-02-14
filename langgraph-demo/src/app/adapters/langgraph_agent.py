@@ -12,6 +12,8 @@ from langchain_core.messages import (
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 
+from app.ports.agents import BaseAgent
+
 logger = logging.getLogger(__name__)
 
 MODEL = "gemini-2.5-flash"
@@ -21,7 +23,7 @@ class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
 
 
-class LangGraphAgent:
+class LangGraphAgent(BaseAgent):
     def __init__(self, model, tools, checkpointer, thread_id: str, system: str = ""):
         self.system = system
         self.model = model.bind_tools(tools)
@@ -71,3 +73,15 @@ class LangGraphAgent:
                 logger.info(v["messages"])
 
         return self.graph.get_state(thread)
+
+    async def __call__(self, input_query: str, stream=True, asynchronous=False) -> dict:
+        if stream:
+            if not asynchronous:
+                agent_state = self.query_stream(input_query)
+                result = agent_state.values["messages"][-1].text
+                return {"result": result}
+            else:
+                pass
+        if not asynchronous:
+            pass
+        return {"result": ""}
