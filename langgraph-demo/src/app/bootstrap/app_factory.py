@@ -23,7 +23,7 @@ logger = logging.getLogger(__name__)
 async def lifespan(app: FastAPI):
     configure_logging()
     db_url = str(settings.db_url)
-    logger.info(f"Starting db with db_url: {settings.db_url}")
+    logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
     pool = ConnectionPool(
         db_url,
         max_size=10,
