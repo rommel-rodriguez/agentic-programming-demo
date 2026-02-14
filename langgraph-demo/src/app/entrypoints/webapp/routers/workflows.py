@@ -34,16 +34,16 @@ router = APIRouter(tags=["agent-workflows"])
 async def query_lgmodel(query: str):
     logger.info("Langgraph test endpoint reached")
     agent_state = None
+    result = dict()
     with SqliteSaver.from_conn_string(":memory:") as memory:
         abot = LangGraphAgent(
             model, [tool], thread_id="3", system=prompt, checkpointer=memory
         )
-        agent_state = abot.query_stream(query)
+        result = await abot(query)
 
-    result = agent_state.values["messages"][-1].text
     logger.debug(f"Query output: {result}")
     if not result:
         raise HTTPException(
             status_code=404, detail="The agent did not return a valid response"
         )
-    return {"result": result}
+    return {"result": result["result"]}
