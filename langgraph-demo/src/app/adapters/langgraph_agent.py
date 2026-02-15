@@ -24,10 +24,9 @@ class AgentState(TypedDict):
 
 
 class LangGraphAgent(BaseAgent):
-    def __init__(self, model, tools, checkpointer, thread_id: str, system: str = ""):
+    def __init__(self, model, tools, checkpointer, system: str = ""):
         self.system = system
         self.model = model.bind_tools(tools)
-        self.thread_id = thread_id
         graph_builder = StateGraph(AgentState)
         graph_builder.add_node("llm", self.call_model)
         graph_builder.add_conditional_edges(
@@ -64,9 +63,19 @@ class LangGraphAgent(BaseAgent):
         result = state["messages"][-1]
         return len(result.tool_calls) > 0
 
-    def query_stream(self, input_query: str | None):
+    # TODO: pass the thread_id as a parameter here
+    def query_stream(self, input_query: str | None, thread_id: str):
+        if not input_query:
+            logger.error("The workflows must receive an initial instruction/message")
+            raise ValueError(
+                "The workflows must receive an initial instruction/message"
+            )
+        if not thread_id:
+            logger.error("thread_id must have a value")
+            raise ValueError("thread_id must have a value")
+
         messages = [HumanMessage(content=input_query)]
-        thread = {"configurable": {"thread_id": self.thread_id}}
+        thread = {"configurable": {"thread_id": thread_id}}
 
         for event in self.graph.stream({"messages": messages}, thread):
             for v in event.values():
@@ -74,10 +83,13 @@ class LangGraphAgent(BaseAgent):
 
         return self.graph.get_state(thread)
 
-    async def __call__(self, input_query: str, stream=True, asynchronous=False) -> dict:
+    # TODO: pass the thread_id as a parameter here also
+    async def __call__(
+        self, input_query: str, thread_id: str, stream=True, asynchronous=False
+    ) -> dict:
         if stream:
             if not asynchronous:
-                agent_state = self.query_stream(input_query)
+                agent_state = self.query_stream(input_query, thread_id)
                 result = agent_state.values["messages"][-1].text
                 return {"result": result}
             else:
