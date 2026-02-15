@@ -46,6 +46,8 @@ async def http_exception_handle_logging(request, exc):
     return await http_exception_handler(request, exc)
 
 
+# TODO: Modify this entrypoint so we can use either an in-memory checkpointer or a
+# production checkpointer. Nest the lifespan function inside if needed.
 def create_app() -> FastAPI:
     app = FastAPI(lifespan=lifespan)
     app.add_middleware(CorrelationIdMiddleware)
