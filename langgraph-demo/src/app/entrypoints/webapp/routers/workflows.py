@@ -2,9 +2,9 @@ import logging
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from app.adapters.langgraph_agent import LangGraphAgent
 from app.entrypoints.webapp.dependencies import get_query_agent_with_search
 from app.entrypoints.webapp.models.workflows import LGQuery
+from app.ports.agents import BaseAgent
 
 logger = logging.getLogger(__name__)
 
@@ -16,7 +16,7 @@ router = APIRouter(tags=["agent-workflows"])
 async def query_lgmodel(
     query: str,
     thread_id: str,
-    agent: LangGraphAgent = Depends(get_query_agent_with_search),
+    agent: BaseAgent = Depends(get_query_agent_with_search),
 ):
     logger.info("Langgraph endpoint reached")
     result = await agent(query, thread_id)
