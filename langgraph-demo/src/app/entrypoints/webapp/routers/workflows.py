@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from app.entrypoints.webapp.dependencies import get_query_agent_with_search
 from app.entrypoints.webapp.models.workflows import LGQuery
-from app.ports.agents import BaseAgent
+from app.ports.agents import QueryAgent, RunQueryCommand
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +16,14 @@ router = APIRouter(tags=["agent-workflows"])
 async def query_lgmodel(
     query: str,
     thread_id: str,
-    agent: BaseAgent = Depends(get_query_agent_with_search),
+    agent: QueryAgent = Depends(get_query_agent_with_search),
 ):
     logger.info("Langgraph endpoint reached")
-    result = await agent(query, thread_id)
+    result = await agent(RunQueryCommand(query=query, thread_id=thread_id))
 
     logger.debug(f"Query output: {result}")
-    if not result.get("result"):
+    if not result.result:
         raise HTTPException(
             status_code=404, detail="The agent did not return a valid response"
         )
-    return {"result": result["result"]}
+    return {"result": result.result}

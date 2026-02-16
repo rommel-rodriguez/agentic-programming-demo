@@ -3,6 +3,7 @@ from langchain_tavily import TavilySearch
 
 from app.adapters.langgraph_agent import LangGraphAgent
 from app.config import settings  # type:ignore
+from app.ports.agents import QueryAgent
 
 tool = TavilySearch(max_results=2, tavily_api_key=settings.tavily_api_key)
 tools = [tool]
@@ -26,5 +27,5 @@ def build_query_agent_with_search(
     model=gemini_model,
     tools=tools,
     system: str = prompt,
-):
+) -> QueryAgent:
     return LangGraphAgent(model, tools, checkpointer, system)

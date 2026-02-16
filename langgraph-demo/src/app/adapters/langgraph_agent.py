@@ -12,7 +12,7 @@ from langchain_core.messages import (
 from langgraph.checkpoint.sqlite import SqliteSaver
 from langgraph.graph import END, StateGraph
 
-from app.ports.agents import BaseAgent
+from app.ports.agents import AgentContext, QueryAgent, RunQueryCommand, RunQueryResult
 
 logger = logging.getLogger(__name__)
 
@@ -21,7 +21,7 @@ class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
 
 
-class LangGraphAgent(BaseAgent):
+class LangGraphAgent(QueryAgent):
     def __init__(self, model, tools, checkpointer, system: str = ""):
         self.system = system
         self.model = model.bind_tools(tools)
@@ -82,16 +82,23 @@ class LangGraphAgent(BaseAgent):
         return self.graph.get_state(thread)
 
     # TODO: pass the thread_id as a parameter here also
+    # async def __call__(
+    #     self, input_query: str, thread_id: str, stream=True, asynchronous=False
+    # ) -> dict:
     async def __call__(
-        self, input_query: str, thread_id: str, stream=True, asynchronous=False
-    ) -> dict:
+        self,
+        cmd: RunQueryCommand,
+        ctx: AgentContext | None = None,
+        stream=True,
+        asynchronous=False,
+    ) -> RunQueryResult:
         if stream:
             if not asynchronous:
-                agent_state = self.query_stream(input_query, thread_id)
+                agent_state = self.query_stream(cmd.query, cmd.thread_id)
                 result = agent_state.values["messages"][-1].text
-                return {"result": result}
+                return RunQueryResult(result=result)
             else:
                 pass
         if not asynchronous:
             pass
-        return {"result": ""}
+        return RunQueryResult(result="")

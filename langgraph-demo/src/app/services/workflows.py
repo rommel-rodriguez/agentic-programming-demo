@@ -1,4 +1,4 @@
-from app.ports.agents import BaseAgent
+from app.ports.agents import QueryAgent
 
 from .commands import RunLGWorkflowCommand
 
@@ -7,7 +7,7 @@ class RunLGWorkflow:
     def __init__(
         self,
         checkpointer,  # NOTE: Or some kind of persistence technology
-        agent: BaseAgent,
+        agent: QueryAgent,
     ):
         pass
 
