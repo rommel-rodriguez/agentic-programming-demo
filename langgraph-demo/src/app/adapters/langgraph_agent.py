@@ -16,8 +16,6 @@ from app.ports.agents import BaseAgent
 
 logger = logging.getLogger(__name__)
 
-MODEL = "gemini-2.5-flash"
-
 
 class AgentState(TypedDict):
     messages: Annotated[list[AnyMessage], operator.add]
