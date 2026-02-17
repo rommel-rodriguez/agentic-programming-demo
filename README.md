@@ -1,78 +1,65 @@
-# FAPI01 - Agentic FastAPI + LangGraph Demo
+# FAPI01 - Backend Portfolio
 
-![python](https://img.shields.io/badge/python-3.11-blue)
-![fastapi](https://img.shields.io/badge/FastAPI-0.121-009688)
-![langgraph](https://img.shields.io/badge/LangGraph-enabled-5c7cfa)
-![langchain](https://img.shields.io/badge/LangChain-enabled-2f9e44)
-![docker](https://img.shields.io/badge/Docker-ready-2496ED)
+Primary backend project: **`langgraph-demo`** (agentic workflow microservice).
 
-Demo project showcasing agentic programming patterns with FastAPI and LangChain/LangGraph.
-This is intentionally incomplete and focused on learning and experimentation, not production.
+## Flagship project: `langgraph-demo`
+`langgraph-demo` is a FastAPI microservice that implements agentic workflows using LangGraph + LangChain, with tool-calling, thread-aware state, and Postgres-backed checkpointing.
 
-## Status
-- Work in progress: some modules are placeholders or partial implementations.
-- Expect missing pieces (tests, persistence wiring, error handling, auth, etc.).
+## Why this backend is portfolio-relevant
+- Real workflow graph orchestration (LLM/tool loop), not just a chat wrapper.
+- Stateful execution model using `thread_id` and LangGraph checkpoints.
+- Clean architecture direction with `ports`, `adapters`, `services`, and web `entrypoints`.
+- Structured JSON logs with correlation IDs for request tracing.
+- Dockerized local environment with Postgres and healthchecks.
 
-## Highlights
-- FastAPI endpoints for streaming file uploads (PDF and binary examples).
-- LangGraph-based agent that can call tools (Tavily search) with a Gemini model.
-- In-memory checkpointing via SQLite for agent state.
-- Pydantic Settings for configuration.
-- DDD / clean-architecture inspired layout with adapters, domain, and entrypoints.
-- Docker-based dev workflow with auto-reload.
+## Stack
+- Python 3.11
+- FastAPI / Uvicorn
+- LangGraph / LangChain
+- Gemini + Tavily tool integration
+- Postgres + psycopg
+- Pydantic Settings
+- Ruff + MyPy configuration
 
-## Project layout
-```
-.
-├─ be1/               # FastAPI upload streaming playground
-├─ langgraph-demo/    # LangGraph + FastAPI demo app
-├─ infra/             # Placeholder (k8s dir currently empty)
-└─ docker-compose.yml # Runs langgraph-demo
-```
-
-## Quickstart (Docker Compose)
-1) Create an `.env` file in the repo root:
-```
+## Quickstart
+1. Create `.env` in repo root:
+```env
 gemini_api_key=YOUR_GEMINI_API_KEY
 tavily_api_key=YOUR_TAVILY_API_KEY
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+POSTGRES_DB=app
 ```
 
-2) Build and run:
-```
+2. Start the stack:
+```bash
 docker compose up --build
 ```
 
-3) Open the API docs:
-```
+3. Open API docs:
+```text
 http://localhost:8000/docs
 ```
 
-## API surface (current)
-### langgraph-demo
-- `GET /query-lgmodel?query=...`
-  - Runs a LangGraph agent with a Tavily search tool and returns the final response.
+## Current API surface (`langgraph-demo`)
+- `GET /wf/query-lgmodel?query=...&thread_id=...`
+- `POST /invoice/attachments/init` (scaffold)
+- `PUT /invoice/attachments/{id}/content` (scaffold)
+- `POST /invoice/runs` (scaffold)
 
-### be1 (run separately)
-- `POST /upload/pdf-streaming` - stream a PDF upload to disk.
-- `POST /upload/binary-streaming` - stream any binary file with optional size limit.
-- `POST /upload/pdf-small` - read a small PDF fully into memory and save.
-- `GET /test-string`
-- `GET /test-dict`
-
-## Running be1 locally
-From `be1/`:
-```
-python -m uvicorn --app-dir src app.main:app --reload
+## Repository layout
+```text
+.
+├─ langgraph-demo/    # Main backend project (agentic workflow microservice)
+├─ be1/               # Secondary upload-streaming playground
+├─ infra/             # Infrastructure workspace (placeholder)
+└─ docker-compose.yml # Local dev stack for langgraph-demo + Postgres
 ```
 
-## Notes and limitations
-- The LangGraph agent is configured for Gemini + Tavily; valid API keys are required.
-- Persistence and domain models are skeletal and intended for iteration.
-- This repo is a demo, so the structure may evolve as experiments continue.
+## Current maturity
+- `langgraph-demo` is the main project and active focus.
+- Some modules are intentionally scaffolded and being expanded iteratively.
+- The repository is designed to show architecture, agentic orchestration, and integration patterns.
 
 ## Authors
 - Rommel Rodriguez Perez - rommelrodperez@gmail.com
-
-## Tags
-`#fastapi` `#langchain` `#langgraph` `#agentic` `#python` `#docker` `#pydantic`
-`#sqlalchemy` `#ddd` `#clean-architecture` `#uvicorn`
