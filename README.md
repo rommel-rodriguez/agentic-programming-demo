@@ -5,7 +5,7 @@ Primary backend project: **`langgraph-demo`** (agentic workflow microservice).
 ## Flagship project: `langgraph-demo`
 `langgraph-demo` is a FastAPI microservice that implements agentic workflows using LangGraph + LangChain, with tool-calling, thread-aware state, and Postgres-backed checkpointing.
 
-## Why this backend is portfolio-relevant
+## Key strengths
 - Real workflow graph orchestration (LLM/tool loop), not just a chat wrapper.
 - Stateful execution model using `thread_id` and LangGraph checkpoints.
 - Clean architecture direction with `ports`, `adapters`, `services`, and web `entrypoints`.

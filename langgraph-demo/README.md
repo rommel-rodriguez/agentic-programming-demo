@@ -2,7 +2,7 @@
 
 Agentic workflow backend built with FastAPI, LangGraph, and LangChain.
 
-## Why this project is strong
+## Key strengths
 - Implements a real tool-calling graph workflow (LLM -> tool -> LLM loop), not a single prompt wrapper.
 - Supports thread-aware state via LangGraph checkpointing, so conversations can continue by `thread_id`.
 - Uses a layered architecture (`entrypoints`, `ports`, `adapters`, `services`, `domain`) for maintainability.
@@ -55,7 +55,7 @@ python -m uvicorn --app-dir src app.entrypoints.webapp.asgi:app --reload
 
 Note: default app startup expects a valid `DB_URL` for Postgres checkpointing.
 
-## What this demonstrates to employers
+## Architecture and runtime highlights
 - Agentic backend design with explicit workflow orchestration.
 - Practical LLM integration with external tool usage.
 - Service decomposition with clear boundaries and dependency injection through FastAPI dependencies.
