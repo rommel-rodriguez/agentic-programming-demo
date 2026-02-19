@@ -50,30 +50,6 @@ def _build_lifespan(checkpointer_backend: str):
     return lifespan
 
 
-# NOTE: Consider moving this inside create_app, and use create_app as a closure
-# in order to configure the type of checkpointer that the application uses
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    configure_logging()
-    db_url = str(settings.db_url)
-    logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
-    pool = ConnectionPool(
-        db_url,
-        max_size=10,
-        connection_class=Connection[DictRow],  # Needed ore mypy complains
-        kwargs={"autocommit": True, "row_factory": dict_row},
-    )
-    checkpointer = PostgresSaver(pool)
-    checkpointer.setup()  # Creates required tables for checkpointing for the first time
-
-    app.state.checkpointer = checkpointer
-    app.state.pg_pool = pool
-    try:
-        yield
-    finally:
-        pool.close()
-
-
 async def http_exception_handle_logging(request, exc):
     logger.error(f"HTTPException {exc.status_code} {exc.detail}")
     return await http_exception_handler(request, exc)
