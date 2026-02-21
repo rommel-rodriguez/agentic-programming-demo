@@ -3,6 +3,7 @@ import logging
 from sqlalchemy import (
     Column,
     Date,
+    Float,
     ForeignKey,
     Integer,
     MetaData,
@@ -37,6 +38,7 @@ users = Table(
     Column("email", String(255)),
 )
 
+
 threads = Table(
     "threads",
     mapper_registry.metadata,
@@ -63,6 +65,17 @@ messages = Table(
     mapper_registry.metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("content", String()),
+)
+
+# NOTE: Invoice related tables
+
+invoices = Table(
+    "invoices",
+    mapper_registry.metadata,
+    Column("id", Integer, primary_key=True, autoincrement=True),
+    Column("user_id", ForeignKey("users.id")),
+    Column("amount", Float, nullable=False),
+    Column("due_date", Date),
 )
 
 
