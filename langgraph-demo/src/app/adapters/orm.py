@@ -58,6 +58,7 @@ thread_messages = Table(
     mapper_registry.metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("thread_id", ForeignKey("threads.id")),
+    Column("message_id", ForeignKey("messages.id")),
 )
 
 messages = Table(
