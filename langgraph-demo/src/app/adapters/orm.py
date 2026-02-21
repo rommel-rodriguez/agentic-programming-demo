@@ -35,7 +35,7 @@ users = Table(
         primary_key=True,
     ),
     Column("name", String(255)),
-    Column("email", String(255)),
+    Column("email", String(255), unique=True),
 )
 
 
