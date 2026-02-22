@@ -2,10 +2,13 @@
 
 services:
   app:
+    profiles: ["dev"]
     build:
       context: ./langgraph-demo
       args:
         APP_ENV: "test"
+        USER_UID: ${LOCAL_UID:-1000}  # Local dev needs to match its user's uid and gid
+        USER_GID: ${LOCAL_GID:-1000}  # in order to be able to write to app's folder
     ports:
       - "127.0.0.1:8000:8000"
     volumes:
