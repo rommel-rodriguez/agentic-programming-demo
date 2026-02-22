@@ -32,6 +32,25 @@ target_metadata = app.adapters.orm.mapper_registry.metadata
 # my_important_option = config.get_main_option("my_important_option")
 # ... etc.
 
+EXTERNAL_TABLES = {
+    "checkpoints",
+    "checkpoint_blobs",
+    "checkpoint_writes",
+    "checkpoint_migrations",
+}
+
+
+def include_object(object_, name, type_, reflected, compare_to):
+    if type_ == "table" and name in EXTERNAL_TABLES:
+        return False
+    if (
+        type_ == "index"
+        and object_.table is not None
+        and object_.table.name in EXTERNAL_TABLES
+    ):
+        return False
+    return True
+
 
 def run_migrations_offline() -> None:
     """Run migrations in 'offline' mode.
@@ -51,6 +70,7 @@ def run_migrations_offline() -> None:
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
+        include_object=include_object,
     )
 
     with context.begin_transaction():
@@ -58,7 +78,11 @@ def run_migrations_offline() -> None:
 
 
 def do_run_migrations(connection: Connection) -> None:
-    context.configure(connection=connection, target_metadata=target_metadata)
+    context.configure(
+        connection=connection,
+        target_metadata=target_metadata,
+        include_object=include_object,
+    )
 
     with context.begin_transaction():
         context.run_migrations()
