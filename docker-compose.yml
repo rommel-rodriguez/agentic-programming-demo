@@ -52,6 +52,65 @@ services:
       retries: 10
       start_period: 5s
 
+  # migrate-dev:
+  #   profiles: ["dev","tools"]
+  #   build:
+  #     context: ./langgraph-demo
+  #     args:
+  #       APP_ENV: dev
+  #       USER_UID: ${LOCAL_UID:-1000}
+  #       USER_GID: ${LOCAL_GID:-1000}
+  #   user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+  #   working_dir: /app
+  #   env_file: [ ./.env ]
+  #   environment:
+  #     DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+  #   volumes:
+  #     - ./langgraph-demo:/app
+  #   entrypoint: ["sh", "-c"]
+  #   command: "alembic upgrade head"
+  #   depends_on:
+  #     psdb:
+  #       condition: service_healthy
+
+  # app-prod:
+  #   profiles: ["prod"]
+  #   build:
+  #     context: ./langgraph-demo
+  #     args:
+  #       APP_ENV: prod
+  #       USER_UID: 1001
+  #       USER_GID: 1001
+  #   read_only: true
+  #   tmpfs:
+  #     - /tmp/app
+  #     - /var/lib/app
+  #   env_file: [ ./.env ]
+  #   environment:
+  #     DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+  #   command: ["uvicorn","--host","0.0.0.0","--app-dir","src","app.entrypoints.webapp.asgi:app"]
+  #   ports:
+  #     - "127.0.0.1:8000:8000"
+  #   depends_on:
+  #     psdb:
+  #       condition: service_healthy
+
+  # migrate-prod:
+  #   profiles: ["prod"]
+  #   build:
+  #     context: ./langgraph-demo
+  #     args:
+  #       APP_ENV: prod
+  #       USER_UID: 1001
+  #       USER_GID: 1001
+  #   env_file: [ ./.env ]
+  #   environment:
+  #     DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+  #   entrypoint: ["sh", "-c"]
+  #   command: "alembic upgrade head"
+  #   depends_on:
+  #     psdb:
+  #       condition: service_healthy
 
 volumes:
   psdb_data:
