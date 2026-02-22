@@ -17,7 +17,7 @@ services:
     command: >
       sh -c "uvicorn --reload --host 0.0.0.0 --app-dir src/ app.entrypoints.webapp.asgi:app"
     env_file:
-      - ./.env
+      - ./langgraph-demo/.env
     environment:
       DB_HOST: psdb
       DB_PORT: 5432
@@ -37,7 +37,7 @@ services:
     volumes:
       - psdb_data:/var/lib/postgresql
     env_file:
-      - ./.env
+      - ./langgraph-demo/.env
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_USER: ${POSTGRES_USER}
@@ -52,26 +52,26 @@ services:
       retries: 10
       start_period: 5s
 
-  # migrate-dev:
-  #   profiles: ["dev","tools"]
-  #   build:
-  #     context: ./langgraph-demo
-  #     args:
-  #       APP_ENV: dev
-  #       USER_UID: ${LOCAL_UID:-1000}
-  #       USER_GID: ${LOCAL_GID:-1000}
-  #   user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
-  #   working_dir: /app
-  #   env_file: [ ./.env ]
-  #   environment:
-  #     DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
-  #   volumes:
-  #     - ./langgraph-demo:/app
-  #   entrypoint: ["sh", "-c"]
-  #   command: "alembic upgrade head"
-  #   depends_on:
-  #     psdb:
-  #       condition: service_healthy
+  migrate-dev:
+    profiles: ["dev","tools"]
+    build:
+      context: ./langgraph-demo
+      args:
+        APP_ENV: dev
+        USER_UID: ${LOCAL_UID:-1000}
+        USER_GID: ${LOCAL_GID:-1000}
+    user: "${LOCAL_UID:-1000}:${LOCAL_GID:-1000}"
+    working_dir: /app
+    env_file: [ ./langgraph-demo/.env ]
+    environment:
+      DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+    volumes:
+      - ./langgraph-demo:/app
+    entrypoint: ["sh", "-c"]
+    command: "alembic upgrade head"
+    depends_on:
+      psdb:
+        condition: service_healthy
 
   # app-prod:
   #   profiles: ["prod"]
