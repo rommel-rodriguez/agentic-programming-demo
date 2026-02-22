@@ -21,7 +21,7 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
-      DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+      DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
 
     depends_on:
       psdb:
