@@ -1,4 +1,4 @@
 # All the lg-prefixed targets are for the langgraph-demo backend
-.PHONY: lg-schema-check
-lg-schema-check:
-	docker compose --profile dev up psdb
+.PHONY: lg-check
+lg-check:
+	docker compose --profile dev run  --rm app alembic check
