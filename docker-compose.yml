@@ -24,7 +24,8 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASS: ${POSTGRES_PASSWORD}
-      DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+      DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+      DB_URL_SQLALCHEMY: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
 
     depends_on:
       psdb:
@@ -64,7 +65,7 @@ services:
     working_dir: /app
     env_file: [ ./langgraph-demo/.env ]
     environment:
-      DB_URL: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+      DB_URL_SQLALCHEMY: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
     volumes:
       - ./langgraph-demo:/app
     entrypoint: ["sh", "-c"]
