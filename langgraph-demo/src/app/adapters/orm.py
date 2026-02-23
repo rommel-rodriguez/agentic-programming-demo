@@ -66,6 +66,7 @@ messages = Table(
     mapper_registry.metadata,
     Column("id", Integer, primary_key=True, autoincrement=True),
     Column("content", String()),
+    Column("type", String()),
 )
 
 # NOTE: Invoice related tables

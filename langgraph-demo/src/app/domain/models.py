@@ -15,6 +15,7 @@ class User:
 @dataclass
 class Message:
     content: str
+    type: str
 
 
 @dataclass
