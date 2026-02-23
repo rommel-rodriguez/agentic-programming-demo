@@ -85,6 +85,7 @@ def start_mappers():
     ## TODO: Currently lacking the domain models
     # users_mapper = mapper()
     mapper_registry.map_imperatively(models.User, users)
+    mapper_registry.map_imperatively(models.Invoice, invoices)
     ## NOTE: Need to capture the mapper returned by map_imperatively in order to use
     ## it in the following relationship. Tho, reading the documentation for v2, I  think
     ## this can be achieved in other ways as well.
