@@ -1,16 +1,22 @@
 import logging
 
 from sqlalchemy import (
+    JSON,
+    CheckConstraint,
     Column,
     Date,
+    DateTime,
+    Enum as SAEnum,
     Float,
     ForeignKey,
     Integer,
     MetaData,
     String,
     Table,
+    Text,
     column,
     event,
+    func,
 )
 
 # from sqlalchemy.orm import mapper, relationship
@@ -80,6 +86,60 @@ invoices = Table(
     Column("due_date", Date),
 )
 
+documents = Table(
+    "documents",
+    mapper_registry.metadata,
+    Column("id", String(36), primary_key=True),
+    Column("user_id", ForeignKey("users.id"), nullable=False),
+    Column("filename", String(255), nullable=False),
+    Column("content_type", String(100), nullable=False),
+    Column("size_bytes", Integer, nullable=False),
+    Column(
+        "status",
+        SAEnum(
+            models.DocumentStatus,
+            name="document_status",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            native_enum=False,
+            create_contraint=True,
+            validate_strings=True,
+        ),
+        nullable=False,
+        server_default=models.DocumentStatus.PENDING_UPLOAD,
+    ),
+    Column(
+        "purpose",
+        SAEnum(
+            models.DocumentPurpose,
+            name="document_purpose",
+            values_callable=lambda enum_cls: [e.value for e in enum_cls],
+            native_enum=False,
+            create_contraint=True,
+            validate_strings=True,
+        ),
+        nullable=False,
+    ),
+    Column("storage_key", String(512), nullable=True, unique=True),
+    Column("checksum_sha256", String(512), nullable=True, unique=True),
+    Column(
+        "created_at", DateTime(timezone=True), nullable=False, server_default=func.now()
+    ),
+    Column(
+        "uploaded_at",
+        DateTime(timezone=True),
+        nullable=True,
+    ),
+    Column(
+        "processed_at",
+        DateTime(timezone=True),
+        nullable=True,
+    ),
+    Column("chunk_count", Integer, nullable=True),
+    Column("doc_metadata", JSON, nullable=False, server_default="{}"),
+    Column("error_message", Text, nullable=True),
+    CheckConstraint("size_bytes >= 0", name="ck_documents_size_non_negative"),
+)
+
 
 def start_mappers():
     logger.info("Starting mappers")
@@ -100,3 +160,4 @@ def start_mappers():
             )
         },
     )
+    mapper_registry.map_imperatively(models.Document, documents)
