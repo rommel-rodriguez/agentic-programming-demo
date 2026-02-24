@@ -13,3 +13,6 @@ lg-check:
 lg-revision:
 	docker compose --profile dev run \
 		--rm lg-app alembic revision --autogenerate -m "$(M)"
+lg-upgrade-db:
+	docker compose --profile dev run \
+		--rm lg-app alembic upgrade head 
