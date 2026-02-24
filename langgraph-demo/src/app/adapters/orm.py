@@ -10,17 +10,14 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
-    MetaData,
     String,
     Table,
     Text,
-    column,
-    event,
     func,
 )
 
 # from sqlalchemy.orm import mapper, relationship
-from sqlalchemy.orm import declarative_base, registry, relationship
+from sqlalchemy.orm import registry, relationship
 
 from app.domain import models
 
