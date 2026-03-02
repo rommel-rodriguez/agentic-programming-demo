@@ -1,0 +1,6 @@
+from typing import Protocol
+
+
+class AttachmentMetadataPort(Protocol):
+    async def mark_uploaded(self, attachment_id: str, storage_key: str) -> None: ...
+    async def exists_pending(self, attachment_id: str) -> bool: ...
