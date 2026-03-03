@@ -4,6 +4,10 @@ from app.bootstrap.services import build_query_agent_with_search
 from app.ports.agents import QueryAgent
 
 
+def get_langgraph_db_pool(request: Request):
+    return request.app.state.pg_pool
+
+
 def get_checkpointer(request: Request):
     return request.app.state.checkpointer
 
