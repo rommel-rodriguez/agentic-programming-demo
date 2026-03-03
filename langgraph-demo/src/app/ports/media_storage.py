@@ -11,3 +11,4 @@ class MediaStoragePort(Protocol):
         original_filename: str | None = None
     ) -> str:
         """Returns storage key/path."""
+        ...
