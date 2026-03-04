@@ -11,7 +11,7 @@ from psycopg.rows import DictRow, dict_row
 from psycopg_pool import ConnectionPool
 
 from app.bootstrap.logging import configure_logging
-from app.config import settings
+from app.config import get_settings
 from app.entrypoints.webapp.routers.invoice import router as invoice_router
 from app.entrypoints.webapp.routers.workflows import router as wf_router
 
@@ -23,6 +23,7 @@ def _build_lifespan(checkpointer_backend: str):
     async def lifespan(app: FastAPI):
         configure_logging()
 
+        settings = get_settings()
         if checkpointer_backend == "memory":
             app.state.checkpointer = InMemorySaver()
             app.state.pg_pool = None

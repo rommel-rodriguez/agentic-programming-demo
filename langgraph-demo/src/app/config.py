@@ -1,6 +1,4 @@
-import logging
-import logging.config
-import logging.handlers
+from functools import lru_cache
 from pathlib import Path
 from typing import Union
 
@@ -21,7 +19,12 @@ class Settings(BaseSettings):
     gemini_api_key: SecretStr
 
 
-settings = Settings()
+# settings = Settings()
+
+
+@lru_cache
+def get_settings() -> Settings:
+    return Settings()
 
 
 # NOTE: Replace most, if not all, with environment variables
