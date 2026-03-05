@@ -1,4 +1,4 @@
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import pytest
 
@@ -123,7 +123,7 @@ class FakeAttachments(AttachmentMetadataPort):
         size_bytes: int,
         purpose: DocumentPurpose
     ) -> UUID:
-        pass
+        return uuid4()
 
 
 @pytest.mark.asyncio
