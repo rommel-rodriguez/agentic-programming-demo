@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from uuid import UUID
 
 
 class Command:
@@ -12,7 +13,7 @@ class RunLGWorkflowCommand(Command):
 
 @dataclass(frozen=True, slots=True)
 class UploadAttachmentContentCommand(Command):
-    attachment_id: str
+    attachment_id: UUID
     content_type: str
     content: bytes
     original_filename: str | None = None
