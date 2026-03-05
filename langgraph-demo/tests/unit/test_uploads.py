@@ -21,7 +21,7 @@ def make_doc(*, content_type: str, size_bytes: int) -> Document:
 
 def make_sut(documents: dict[UUID, Document]):
     storage = FakeStorage(objects={})
-    attachments = FakeAttachment(documents=documents)
+    attachments = FakeAttachments(documents=documents)
     return (
         UploadAttachmentContent(storage=storage, attachments=attachments),
         storage,
@@ -74,7 +74,7 @@ class FakeFailingStorage(MediaStoragePort):
         raise RuntimeError("storage unavailable")
 
 
-class FakeAttachment(AttachmentMetadataPort):
+class FakeAttachments(AttachmentMetadataPort):
     # documents: dict[str, Document]
 
     def __init__(self, documents: dict[UUID, Document] | None = None):
@@ -139,7 +139,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     )
     documents[doc.id] = doc
     storage = FakeStorage(objects=storage_objects)
-    attachments = FakeAttachment(documents=documents)
+    attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
         attachment_id=doc.id,
         content_type=doc.content_type,
@@ -171,7 +171,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     )
     documents[doc.id] = doc
     storage = FakeStorage(objects=storage_objects)
-    attachments = FakeAttachment(documents=documents)
+    attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
         attachment_id=doc.id,
         content_type=doc.content_type,
@@ -211,7 +211,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     assert updated_doc.status == DocumentStatus.UPLOADED
     documents[updated_doc.id] = updated_doc
     storage = FakeStorage(objects=storage_objects)
-    attachments = FakeAttachment(documents=documents)
+    attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
         attachment_id=doc.id,
         content_type=doc.content_type,
@@ -235,7 +235,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
 async def test_upload_attachment_content_propagate_storage_error_and_skips_mark_uploaded():
     doc = make_doc(content_type="application/pdf", size_bytes=len(b"content1"))
     documents = {doc.id: doc}
-    attachments = FakeAttachment(documents=documents)
+    attachments = FakeAttachments(documents=documents)
     storage = FakeFailingStorage()
 
     cmd = UploadAttachmentContentCommand(
