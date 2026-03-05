@@ -58,6 +58,22 @@ class FakeStorage(MediaStoragePort):
         return storage_key
 
 
+class FakeFailingStorage(MediaStoragePort):
+    def __init__(self, objects: dict[str, dict] | None = None):
+        self.save_calls: list[tuple[UUID | str, bytes, str, str | None]] = []
+
+    async def save(
+        self,
+        *,
+        key: UUID | str,
+        content: bytes,
+        content_type: str,
+        original_filename: str | None = None
+    ) -> str:
+        self.save_calls.append((key, content, content_type, original_filename))
+        raise RuntimeError("storage unavailable")
+
+
 class FakeAttachment(AttachmentMetadataPort):
     # documents: dict[str, Document]
 
@@ -97,6 +113,17 @@ class FakeAttachment(AttachmentMetadataPort):
         doc = self.documents.get(attachment_id)
         self.exists_pending_calls.append(attachment_id)
         return bool(doc and doc.status == DocumentStatus.PENDING_UPLOAD)
+
+    async def register_pending(
+        self,
+        *,
+        user_id: int,
+        filename: str,
+        content_type: str,
+        size_bytes: int,
+        purpose: DocumentPurpose
+    ) -> UUID:
+        pass
 
 
 @pytest.mark.asyncio
@@ -202,3 +229,25 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     )  # Test exists_pending was called before saving
     assert storage.save_calls == []
     assert attachments.mark_uploaded_calls == []
+
+
+@pytest.mark.asyncio
+async def test_upload_attachment_content_propagate_storage_error_and_skips_mark_uploaded():
+    doc = make_doc(content_type="application/pdf", size_bytes=len(b"content1"))
+    documents = {doc.id: doc}
+    attachments = FakeAttachment(documents=documents)
+    storage = FakeFailingStorage()
+
+    cmd = UploadAttachmentContentCommand(
+        attachment_id=doc.id, content_type=doc.content_type, content=b"content1"
+    )
+
+    use_case = UploadAttachmentContent(storage=storage, attachments=attachments)
+
+    with pytest.raises(RuntimeError, match="storage unavailable"):
+        await use_case(cmd)
+
+    assert attachments.exists_pending_calls == [doc.id]
+    assert attachments.mark_uploaded_calls == []
+    assert documents[doc.id].status == DocumentStatus.PENDING_UPLOAD
+    assert len(storage.save_calls) == 1
