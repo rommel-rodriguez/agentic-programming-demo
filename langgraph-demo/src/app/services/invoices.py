@@ -39,7 +39,7 @@ class UploadAttachmentContent:
         if not exists:
             raise LookupError("Attachment not found or is not pending upload")
 
-        storage_ref = await self._storage.save(
+        storage_key = await self._storage.save(
             key=cmd.attachment_id,
             content=cmd.content,
             content_type=cmd.content_type,
@@ -48,7 +48,7 @@ class UploadAttachmentContent:
 
         await self._attachments.mark_uploaded(
             attachment_id=cmd.attachment_id,
-            storage_ref=storage_ref,
+            storage_key=storage_key,
             content_type=cmd.content_type,
             size_bytes=len(cmd.content),
             checksum_sha256=checksum,
