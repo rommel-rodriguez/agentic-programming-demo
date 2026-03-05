@@ -9,6 +9,26 @@ from app.services.commands import UploadAttachmentContentCommand
 from app.services.invoices import UploadAttachmentContent
 
 
+def make_doc(*, content_type: str, size_bytes: int) -> Document:
+    return Document(
+        user_id=1,
+        filename="invoice_1",
+        content_type=content_type,
+        purpose=DocumentPurpose.CONTEXT,
+        size_bytes=size_bytes,
+    )
+
+
+def make_sut(documents: dict[UUID, Document]):
+    storage = FakeStorage(objects={})
+    attachments = FakeAttachment(documents=documents)
+    return (
+        UploadAttachmentContent(storage=storage, attachments=attachments),
+        storage,
+        attachments,
+    )
+
+
 class FakeStorage(MediaStoragePort):
     def __init__(self, objects: dict[str, dict] | None = None):
         self.objects: dict[str, dict] = objects or {}
@@ -44,6 +64,7 @@ class FakeAttachment(AttachmentMetadataPort):
     def __init__(self, documents: dict[UUID, Document] | None = None):
         self.documents: dict[UUID, Document] = documents or dict()
         self.mark_uploaded_calls: list[tuple[UUID, str, str, int]] = []
+        self.exists_pending_calls: list[UUID] = []
 
     async def mark_uploaded(
         self,
@@ -74,6 +95,7 @@ class FakeAttachment(AttachmentMetadataPort):
 
     async def exists_pending(self, attachment_id: UUID) -> bool:
         doc = self.documents.get(attachment_id)
+        self.exists_pending_calls.append(attachment_id)
         return bool(doc and doc.status == DocumentStatus.PENDING_UPLOAD)
 
 
@@ -81,32 +103,31 @@ class FakeAttachment(AttachmentMetadataPort):
 async def test_upload_attachment_content_rejects_non_valid_filetypes():
     documents = dict()
     storage_objects: dict[str, dict] = {}
-    doc1 = Document(
+    doc = Document(
         user_id=1,
         filename="invoice_1",
         content_type="application/invalid-mimetype",
         purpose=DocumentPurpose.CONTEXT,
         size_bytes=1024,
     )
-    # doc2 = Document(
-    #     user_id=1,
-    #     filename="invoice_1",
-    #     content_type="application/nightmare",
-    #     purpose=DocumentPurpose.CONTEXT,
-    #     size_bytes=1024,
-    # )
-    documents[doc1.id] = doc1
-    command1 = UploadAttachmentContentCommand(
-        attachment_id=doc1.id,
-        content_type=doc1.content_type,
+    documents[doc.id] = doc
+    storage = FakeStorage(objects=storage_objects)
+    attachments = FakeAttachment(documents=documents)
+    cmd = UploadAttachmentContentCommand(
+        attachment_id=doc.id,
+        content_type=doc.content_type,
         content="content1".encode("utf-8"),
     )
     upat_uc = UploadAttachmentContent(
-        storage=FakeStorage(objects=storage_objects),
-        attachments=FakeAttachment(documents=documents),
+        storage=storage,
+        attachments=attachments,
     )
     with pytest.raises(ValueError, match="valid MIME type"):
-        await upat_uc(command1)
+        await upat_uc(cmd)
+
+    assert len(storage.save_calls) == 0
+    assert len(attachments.exists_pending_calls) == 0
+    assert len(attachments.mark_uploaded_calls) == 0
 
 
 @pytest.mark.asyncio
@@ -124,7 +145,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     documents[doc.id] = doc
     storage = FakeStorage(objects=storage_objects)
     attachments = FakeAttachment(documents=documents)
-    command1 = UploadAttachmentContentCommand(
+    cmd = UploadAttachmentContentCommand(
         attachment_id=doc.id,
         content_type=doc.content_type,
         content=fake_content,
@@ -133,7 +154,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
         storage=storage,
         attachments=attachments,
     )
-    await upat_uc(command1)
+    await upat_uc(cmd)
     assert len(storage.save_calls) == 1
     assert len(attachments.mark_uploaded_calls) == 1
     saved_doc = attachments.documents[doc.id]
@@ -164,7 +185,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     documents[updated_doc.id] = updated_doc
     storage = FakeStorage(objects=storage_objects)
     attachments = FakeAttachment(documents=documents)
-    command1 = UploadAttachmentContentCommand(
+    cmd = UploadAttachmentContentCommand(
         attachment_id=doc.id,
         content_type=doc.content_type,
         content="content1".encode("utf-8"),
@@ -174,7 +195,10 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
         attachments=attachments,
     )
     with pytest.raises(LookupError, match="not pending"):
-        await upat_uc(command1)
+        await upat_uc(cmd)
 
+    assert (
+        len(attachments.exists_pending_calls) == 1
+    )  # Test exists_pending was called before saving
     assert storage.save_calls == []
     assert attachments.mark_uploaded_calls == []
