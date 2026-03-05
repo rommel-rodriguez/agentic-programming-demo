@@ -8,8 +8,8 @@ from sqlalchemy.ext.asyncio import async_engine_from_config
 import app
 import app.adapters
 import app.adapters.orm
-import app.config
 from alembic import context
+from app.config import get_settings
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.
@@ -21,7 +21,8 @@ if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
 # Setting db URL
-config.set_main_option("sqlalchemy.url", str(app.config.settings.db_url_sqlalchemy))
+settings = get_settings()
+config.set_main_option("sqlalchemy.url", str(settings.db_url_sqlalchemy))
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel
