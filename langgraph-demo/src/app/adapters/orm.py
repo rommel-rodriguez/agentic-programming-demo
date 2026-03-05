@@ -13,6 +13,7 @@ from sqlalchemy import (
     String,
     Table,
     Text,
+    Uuid,
     func,
 )
 
@@ -86,7 +87,7 @@ invoices = Table(
 documents = Table(
     "documents",
     mapper_registry.metadata,
-    Column("id", String(36), primary_key=True),
+    Column("id", Uuid(as_uuid=True), primary_key=True),
     Column("user_id", ForeignKey("users.id"), nullable=False),
     Column("filename", String(255), nullable=False),
     Column("content_type", String(100), nullable=False),
