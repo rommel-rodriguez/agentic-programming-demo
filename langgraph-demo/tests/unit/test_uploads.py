@@ -25,11 +25,11 @@ class FakeStorage(MediaStoragePort):
         # TODO: Figure out how to derive the storage_ref properly
         storage_key = str(key)
         doc = {
-            key: key,
-            content: content,
-            content_type: content_type,
-            original_filename: original_filename,
-            storage_key: storage_key,
+            "key": key,
+            "storage_key": storage_key,
+            "content": content,
+            "content_type": content_type,
+            "original_filename": original_filename,
         }
         self.objects[storage_key] = doc
         self.save_calls.append(
@@ -105,7 +105,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
         storage=FakeStorage(objects=storage_objects),
         attachments=FakeAttachment(documents=documents),
     )
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError, match="valid MIME type"):
         await upat_uc(command1)
 
 
@@ -136,6 +136,13 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     await upat_uc(command1)
     assert len(storage.save_calls) == 1
     assert len(attachments.mark_uploaded_calls) == 1
+    saved_doc = attachments.documents[doc.id]
+    assert saved_doc.status == DocumentStatus.UPLOADED
+    assert saved_doc.storage_key == storage.save_calls[0][4]
+    assert saved_doc.checksum_sha256 is not None
+    assert len(saved_doc.checksum_sha256) == 64
+    assert storage.save_calls[0][0] == doc.id
+    assert attachments.mark_uploaded_calls[0][0] == doc.id
 
 
 @pytest.mark.asyncio
@@ -166,5 +173,8 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
         storage=storage,
         attachments=attachments,
     )
-    with pytest.raises(LookupError):
+    with pytest.raises(LookupError, match="not pending"):
         await upat_uc(command1)
+
+    assert storage.save_calls == []
+    assert attachments.mark_uploaded_calls == []
