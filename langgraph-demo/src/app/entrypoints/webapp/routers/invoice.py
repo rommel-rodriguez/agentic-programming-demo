@@ -14,6 +14,8 @@ router = APIRouter(tags=["agent-workflows", "invoice-parsing"])
 
 @router.post("/attachments/init", response_model=UploadInitOut)
 async def init_upload(payload: UploadInitIn):
+    # TODO: somehow decode the auth token and get the user_id before creating the
+    # command for the service. Auth token must be in the Authentication Header
     id = str(uuid.uuid4())
     # DB: insert attachment with status='pending_upload' + metadata
     return UploadInitOut(id=id)
