@@ -21,6 +21,8 @@ async def init_upload(payload: UploadInitIn):
 
 @router.put("/attachments/{id}/content")
 async def upload_content(id: str, file: UploadFile = File(...)):
+    # TODO: This check should not be a HTTP layer responsibility, delegate this for
+    # the services to take care off.
     if file.content_type != "application/pdf":
         raise HTTPException(status_code=400, detail="Must be PDF file")
     # TODO: Implement service, or just code snippet, that takes care of media storage

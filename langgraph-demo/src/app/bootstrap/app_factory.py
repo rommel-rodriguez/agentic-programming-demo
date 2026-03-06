@@ -4,6 +4,7 @@ from contextlib import asynccontextmanager
 from asgi_correlation_id import CorrelationIdMiddleware
 from fastapi import FastAPI, HTTPException
 from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres import PostgresSaver
 from psycopg import Connection
@@ -14,6 +15,7 @@ from app.bootstrap.logging import configure_logging
 from app.config import get_settings
 from app.entrypoints.webapp.routers.invoice import router as invoice_router
 from app.entrypoints.webapp.routers.workflows import router as wf_router
+from app.services.errors import ApplicationError
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,20 @@ async def http_exception_handle_logging(request, exc):
     return await http_exception_handler(request, exc)
 
 
+async def handle_application_error(request, exc):
+    status_map = {
+        "unsupported_mime_type": 400,
+        "attachment_not_pending": 404,  # or 409 depending on business semantcis
+        "storage_unavailable": 503,
+        "attachment_metadata_update_error": 500,
+    }
+
+    return JSONResponse(
+        status_code=status_map.get(exc.code, 500),
+        content={"error": {"code": exc.code, "message": str(exc)}},
+    )
+
+
 # TODO: Modify this entrypoint so we can use either an in-memory checkpointer or a
 # production checkpointer. Nest the lifespan function inside if needed.
 def create_app(*, checkpointer_backend: str = "postgres") -> FastAPI:
@@ -64,4 +80,5 @@ def create_app(*, checkpointer_backend: str = "postgres") -> FastAPI:
     app.include_router(wf_router, prefix="/wf")
     app.include_router(invoice_router, prefix="/invoice")
     app.add_exception_handler(HTTPException, http_exception_handle_logging)
+    app.add_exception_handler(ApplicationError, handle_application_error)
     return app

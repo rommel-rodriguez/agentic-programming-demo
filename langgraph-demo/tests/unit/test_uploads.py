@@ -4,8 +4,14 @@ import pytest
 
 from app.domain.models import Document, DocumentPurpose, DocumentStatus
 from app.ports.attachments import AttachmentMetadataPort
+from app.ports.errors import MediaStorageError
 from app.ports.media_storage import MediaStoragePort
 from app.services.commands import UploadAttachmentContentCommand
+from app.services.errors import (
+    AttachmentNotPendingError,
+    StorageUnavailableError,
+    UnsupportedMimeTypeError,
+)
 from app.services.invoices import UploadAttachmentContent
 
 
@@ -71,7 +77,7 @@ class FakeFailingStorage(MediaStoragePort):
         original_filename: str | None = None
     ) -> str:
         self.save_calls.append((key, content, content_type, original_filename))
-        raise RuntimeError("storage unavailable")
+        raise MediaStorageError("storage unavailable")
 
 
 class FakeAttachments(AttachmentMetadataPort):
@@ -149,7 +155,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
         storage=storage,
         attachments=attachments,
     )
-    with pytest.raises(ValueError, match="valid MIME type"):
+    with pytest.raises(UnsupportedMimeTypeError, match="valid MIME type"):
         await upat_uc(cmd)
 
     assert len(storage.save_calls) == 0
@@ -221,7 +227,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
         storage=storage,
         attachments=attachments,
     )
-    with pytest.raises(LookupError, match="not pending"):
+    with pytest.raises(AttachmentNotPendingError, match="not pending"):
         await upat_uc(cmd)
 
     assert (
@@ -244,8 +250,12 @@ async def test_upload_attachment_content_propagate_storage_error_and_skips_mark_
 
     use_case = UploadAttachmentContent(storage=storage, attachments=attachments)
 
-    with pytest.raises(RuntimeError, match="storage unavailable"):
+    with pytest.raises(StorageUnavailableError) as exc_info:
         await use_case(cmd)
+
+    assert exc_info.value.code == "storage_unavailable"
+    assert isinstance(exc_info.value.__cause__, MediaStorageError)
+    assert str(exc_info.value.__cause__) == "storage unavailable"
 
     assert attachments.exists_pending_calls == [doc.id]
     assert attachments.mark_uploaded_calls == []
