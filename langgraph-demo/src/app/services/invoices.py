@@ -4,7 +4,10 @@ import logging
 from app.ports.attachments import AttachmentMetadataPort
 from app.ports.errors import MediaStorageError
 from app.ports.media_storage import MediaStoragePort
-from app.services.commands import UploadAttachmentContentCommand
+from app.services.commands import (
+    RegisterAttachmentCommand,
+    UploadAttachmentContentCommand,
+)
 from app.services.errors import (
     AttachmentNotPendingError,
     StorageUnavailableError,

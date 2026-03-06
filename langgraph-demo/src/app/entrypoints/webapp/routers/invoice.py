@@ -1,19 +1,24 @@
 import logging
 import uuid
 
-from fastapi import APIRouter, File, HTTPException, UploadFile
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.entrypoints.webapp.dependencies import get_register_attachmetn_uc
 from app.entrypoints.webapp.models.invoice import (
     RunIn,
     UploadInitIn,
     UploadInitOut,
 )
+from app.services.invoices import RegisterAttachment
 
 router = APIRouter(tags=["agent-workflows", "invoice-parsing"])
 
 
 @router.post("/attachments/init", response_model=UploadInitOut)
-async def init_upload(payload: UploadInitIn):
+async def init_upload(
+    payload: UploadInitIn,
+    register_attachment_uc: RegisterAttachment = Depends(get_register_attachmetn_uc),
+):
     # TODO: somehow decode the auth token and get the user_id before creating the
     # command for the service. Auth token must be in the Authentication Header
     id = str(uuid.uuid4())
