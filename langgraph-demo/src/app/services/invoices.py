@@ -25,6 +25,14 @@ def compute_document_sha256_hash(content: bytes) -> str:
     return hashlib.sha256(content).hexdigest()
 
 
+class RegisterAttachment:
+    def __init__(self, *, attachments: AttachmentMetadataPort):
+        self._attachments = attachments
+
+    async def __call__(self, cmd: RegisterAttachmentCommand):
+        pass
+
+
 class UploadAttachmentContent:
     def __init__(
         self, *, storage: MediaStoragePort, attachments: AttachmentMetadataPort
