@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from pydantic import BaseModel
 
 
@@ -8,7 +10,7 @@ class UploadInitIn(BaseModel):
 
 
 class UploadInitOut(BaseModel):
-    id: str
+    id: UUID
 
 
 class RunIn(BaseModel):
