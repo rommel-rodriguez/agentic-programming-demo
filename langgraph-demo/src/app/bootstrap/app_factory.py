@@ -2,7 +2,7 @@ import logging
 from contextlib import asynccontextmanager
 
 from asgi_correlation_id import CorrelationIdMiddleware
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, status
 from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import InMemorySaver
@@ -60,11 +60,11 @@ async def http_exception_handle_logging(request, exc):
 
 async def handle_application_error(request, exc):
     status_map = {
-        "unsupported_mime_type": 400,
-        "attachment_not_pending": 404,  # or 409 depending on business semantcis
-        "storage_unavailable": 503,
-        "attachment_metadata_update_error": 500,
-        "attachment_size_bytes_too_big": 413,
+        "unsupported_mime_type": status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+        "attachment_not_pending": status.HTTP_404_NOT_FOUND,  # or 409 depending on business semantcis
+        "storage_unavailable": status.HTTP_503_SERVICE_UNAVAILABLE,
+        "attachment_metadata_update_error": status.HTTP_500_INTERNAL_SERVER_ERROR,
+        "attachment_size_bytes_too_big": status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
     }
 
     return JSONResponse(
