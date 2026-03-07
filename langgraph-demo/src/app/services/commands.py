@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 from uuid import UUID
 
+from app.domain.models import DocumentPurpose
+
 
 class Command:
     pass
@@ -16,6 +18,7 @@ class RegisterAttachmentCommand(Command):
     user_id: int
     size_bytes: int
     content_type: str
+    purpose: DocumentPurpose
     original_filename: str | None = None
 
 
