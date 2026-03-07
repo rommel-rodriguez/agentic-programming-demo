@@ -1,6 +1,8 @@
 import hashlib
 import logging
+from uuid import UUID
 
+from app.domain.models import DocumentPurpose
 from app.ports.attachments import AttachmentMetadataPort
 from app.ports.errors import MediaStorageError
 from app.ports.media_storage import MediaStoragePort
@@ -10,12 +12,14 @@ from app.services.commands import (
 )
 from app.services.errors import (
     AttachmentNotPendingError,
+    AttachmentSizeBytesTooBig,
     StorageUnavailableError,
     UnsupportedMimeTypeError,
 )
 
 # NOTE: Should this come from a database table?
 VALID_MIMETYPES = {"application/pdf"}
+MAX_FILE_SIZE = 20971520  # NOTE: 20MiB
 
 logger = logging.getLogger(__name__)
 
@@ -32,8 +36,25 @@ class RegisterAttachment:
     def __init__(self, *, attachments: AttachmentMetadataPort):
         self._attachments = attachments
 
-    async def __call__(self, cmd: RegisterAttachmentCommand):
-        pass
+    async def __call__(self, cmd: RegisterAttachmentCommand) -> UUID:
+        if cmd.content_type not in VALID_MIMETYPES:
+            raise UnsupportedMimeTypeError(
+                f"Must have a valid MIME type, got {cmd.content_type}"
+            )
+
+        if cmd.size_bytes > MAX_FILE_SIZE:
+            raise AttachmentSizeBytesTooBig(
+                f"The file must be under {MAX_FILE_SIZE} bytes"
+            )
+
+        attachment_id = await self._attachments.register_pending(
+            user_id=cmd.user_id,
+            filename=cmd.original_filename,
+            content_type=cmd.content_type,
+            size_bytes=cmd.size_bytes,
+            purpose=cmd.purpose,
+        )
+        return attachment_id
 
 
 class UploadAttachmentContent:
