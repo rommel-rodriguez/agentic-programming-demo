@@ -64,6 +64,7 @@ async def handle_application_error(request, exc):
         "attachment_not_pending": 404,  # or 409 depending on business semantcis
         "storage_unavailable": 503,
         "attachment_metadata_update_error": 500,
+        "attachment_size_bytes_too_big": 413,
     }
 
     return JSONResponse(
