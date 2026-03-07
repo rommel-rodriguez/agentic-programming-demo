@@ -19,7 +19,7 @@ class AttachmentMetadataPort(Protocol):
         self,
         *,
         user_id: int,
-        filename: str,
+        filename: str | None,
         content_type: str,
         size_bytes: int,
         purpose: DocumentPurpose,
