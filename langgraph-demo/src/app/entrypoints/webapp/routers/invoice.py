@@ -3,12 +3,14 @@ import uuid
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
+from app.domain.models import DocumentPurpose
 from app.entrypoints.webapp.dependencies import get_register_attachmetn_uc
 from app.entrypoints.webapp.models.invoice import (
     RunIn,
     UploadInitIn,
     UploadInitOut,
 )
+from app.services.commands import RegisterAttachmentCommand
 from app.services.invoices import RegisterAttachment
 
 router = APIRouter(tags=["agent-workflows", "invoice-parsing"])
@@ -21,7 +23,18 @@ async def init_upload(
 ):
     # TODO: somehow decode the auth token and get the user_id before creating the
     # command for the service. Auth token must be in the Authentication Header
-    id = str(uuid.uuid4())
+    # NOTE: Settting the purpose here as this is not a generic upload endpoint, tho
+    # it might be better to make this series of upload endpoints be generic in the future.
+    purpose = DocumentPurpose.INVOICE
+    fake_user_id = 1  # NOTE: Get this for the Authorization header somehow.
+    cmd = RegisterAttachmentCommand(
+        user_id=fake_user_id,
+        content_type=payload.content_type,
+        original_filename=payload.filename,
+        purpose=purpose,
+        size_bytes=payload.size_bytes,
+    )
+    id = await register_attachment_uc(cmd)
     # DB: insert attachment with status='pending_upload' + metadata
     return UploadInitOut(id=id)
 
