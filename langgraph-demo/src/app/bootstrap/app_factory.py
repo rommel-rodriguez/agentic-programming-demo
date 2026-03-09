@@ -20,6 +20,39 @@ from app.services.errors import ApplicationError
 logger = logging.getLogger(__name__)
 
 
+def build_langgraph_pool(dsn: str) -> ConnectionPool[Connection[DictRow]]:
+    return ConnectionPool(
+        conninfo=dsn,
+        min_size=1,
+        max_size=5,
+        timeout=10,
+        max_lifetime=1800,
+        max_idle=300,
+        open=False,
+        kwargs={"autocommit": True, "row_factory": dict_row},
+        check=ConnectionPool[Connection[DictRow]].check_connection,
+        name="langraph_pool",
+    )
+
+
+def build_app_pool(dsn: str) -> ConnectionPool:
+    return ConnectionPool(
+        conninfo=dsn,
+        min_size=2,
+        max_size=20,
+        timeout=5,
+        max_waiting=50,
+        max_lifetime=3600,
+        max_idle=600,
+        open=False,
+        kwargs={
+            "autocommit": False,
+        },
+        check=ConnectionPool.check_connection,
+        name="app_pool",
+    )
+
+
 def _build_lifespan(checkpointer_backend: str):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -34,12 +67,13 @@ def _build_lifespan(checkpointer_backend: str):
 
         db_url = str(settings.db_url)
         logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
-        pool = ConnectionPool(
-            db_url,
-            max_size=10,
-            connection_class=Connection[DictRow],  # Needed ore mypy complains
-            kwargs={"autocommit": True, "row_factory": dict_row},
-        )
+        # pool = ConnectionPool(
+        #     db_url,
+        #     max_size=10,
+        #     connection_class=Connection[DictRow],  # Needed ore mypy complains
+        #     kwargs={"autocommit": True, "row_factory": dict_row},
+        # )
+        pool = build_langgraph_pool(db_url)
         checkpointer = PostgresSaver(pool)
         checkpointer.setup()  # Creates required tables for checkpointing for the first time
 
