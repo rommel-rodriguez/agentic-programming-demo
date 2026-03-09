@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import operator
 from typing import Annotated, TypedDict
@@ -36,21 +37,25 @@ class LangGraphAgent(QueryAgent):
         self.graph = graph_builder.compile(checkpointer=checkpointer)
         self.tools = {t.name: t for t in tools}
 
-    def call_model(self, state: AgentState):
+    async def call_model(self, state: AgentState):
         messages = state["messages"]
         if self.system:
             messages = [SystemMessage(content=self.system)] + messages
-        message = self.model.invoke(messages)
+        message = await self.model.ainvoke(messages)
         return {"messages": [message]}
 
-    def execute_action(self, state: AgentState):
+    async def execute_action(self, state: AgentState):
         logger.debug("Inside the 'action' node")
         tool_calls = state["messages"][-1].tool_calls
         results = []
         for t in tool_calls:
             logger.info(f"Executing the {t['name']} tool")
             logger.debug(f"{t['name']} args: {t['args']}")
-            result = self.tools[t["name"]].invoke(t["args"])
+            tool = self.tools[t["name"]]
+            if hasattr(tool, "ainvoke"):
+                result = await tool.ainvoke(t["args"])
+            else:
+                result = await asyncio.to_thread(tool.invoke, t["args"])
             results.append(
                 ToolMessage(tool_call_id=t["id"], name=t["name"], content=str(result))
             )
@@ -62,7 +67,7 @@ class LangGraphAgent(QueryAgent):
         return len(result.tool_calls) > 0
 
     # TODO: pass the thread_id as a parameter here
-    def query_stream(self, input_query: str | None, thread_id: str):
+    async def query_stream(self, input_query: str | None, thread_id: str):
         if not input_query:
             logger.error("The workflows must receive an initial instruction/message")
             raise ValueError(
@@ -75,11 +80,11 @@ class LangGraphAgent(QueryAgent):
         messages = [HumanMessage(content=input_query)]
         thread = {"configurable": {"thread_id": thread_id}}
 
-        for event in self.graph.stream({"messages": messages}, thread):
+        async for event in self.graph.astream({"messages": messages}, thread):
             for v in event.values():
                 logger.info(v["messages"])
 
-        return self.graph.get_state(thread)
+        return await self.graph.aget_state(thread)
 
     # TODO: pass the thread_id as a parameter here also
     # async def __call__(
@@ -90,15 +95,9 @@ class LangGraphAgent(QueryAgent):
         cmd: RunQueryCommand,
         ctx: AgentContext | None = None,
         stream=True,
-        asynchronous=False,
     ) -> RunQueryResult:
         if stream:
-            if not asynchronous:
-                agent_state = self.query_stream(cmd.query, cmd.thread_id)
-                result = agent_state.values["messages"][-1].text
-                return RunQueryResult(result=result)
-            else:
-                pass
-        if not asynchronous:
-            pass
+            agent_state = await self.query_stream(cmd.query, cmd.thread_id)
+            result = agent_state.values["messages"][-1].text
+            return RunQueryResult(result=result)
         return RunQueryResult(result="")

@@ -7,9 +7,10 @@ from fastapi.exception_handlers import http_exception_handler
 from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres import PostgresSaver
-from psycopg import Connection
+from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
+from psycopg import AsyncConnection, Connection
 from psycopg.rows import DictRow, dict_row
-from psycopg_pool import ConnectionPool
+from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from app.bootstrap.logging import configure_logging
 from app.config import get_settings
@@ -20,8 +21,8 @@ from app.services.errors import ApplicationError
 logger = logging.getLogger(__name__)
 
 
-def build_langgraph_pool(dsn: str) -> ConnectionPool[Connection[DictRow]]:
-    return ConnectionPool(
+def build_langgraph_pool(dsn: str) -> AsyncConnectionPool[AsyncConnection[DictRow]]:
+    return AsyncConnectionPool(
         conninfo=dsn,
         min_size=1,
         max_size=5,
@@ -30,13 +31,13 @@ def build_langgraph_pool(dsn: str) -> ConnectionPool[Connection[DictRow]]:
         max_idle=300,
         open=False,
         kwargs={"autocommit": True, "row_factory": dict_row},
-        check=ConnectionPool[Connection[DictRow]].check_connection,
+        check=AsyncConnectionPool[AsyncConnection[DictRow]].check_connection,
         name="langraph_pool",
     )
 
 
-def build_app_pool(dsn: str) -> ConnectionPool:
-    return ConnectionPool(
+def build_app_pool(dsn: str) -> AsyncConnectionPool:
+    return AsyncConnectionPool(
         conninfo=dsn,
         min_size=2,
         max_size=20,
@@ -48,7 +49,7 @@ def build_app_pool(dsn: str) -> ConnectionPool:
         kwargs={
             "autocommit": False,
         },
-        check=ConnectionPool.check_connection,
+        check=AsyncConnectionPool.check_connection,
         name="app_pool",
     )
 
@@ -59,6 +60,8 @@ def _build_lifespan(checkpointer_backend: str):
         configure_logging()
 
         settings = get_settings()
+        #  TODO: This is the flag for the checkpointer backend, a flag for the
+        #  application model backend is still required.
         if checkpointer_backend == "memory":
             app.state.checkpointer = InMemorySaver()
             app.state.pg_pool = None
@@ -73,16 +76,20 @@ def _build_lifespan(checkpointer_backend: str):
         #     connection_class=Connection[DictRow],  # Needed ore mypy complains
         #     kwargs={"autocommit": True, "row_factory": dict_row},
         # )
-        pool = build_langgraph_pool(db_url)
-        checkpointer = PostgresSaver(pool)
-        checkpointer.setup()  # Creates required tables for checkpointing for the first time
+        lg_pool = build_langgraph_pool(db_url)
+        app_pool = build_langgraph_pool(db_url)
+        await lg_pool.open(wait=True)
+        await app_pool.open(wait=True)
 
-        app.state.checkpointer = checkpointer
-        app.state.pg_pool = pool
+        app.state.langgraph_pool = lg_pool
+        app.state.app_pool = lg_pool
+        app.state.checkpointer = AsyncPostgresSaver(lg_pool)
+        await app.state.checkpointer.setup()
         try:
             yield
         finally:
-            pool.close()
+            await lg_pool.close()
+            await app_pool.close()
 
     return lifespan
 
