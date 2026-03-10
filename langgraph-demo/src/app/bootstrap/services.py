@@ -4,6 +4,8 @@ from langchain_tavily import TavilySearch
 from app.adapters.langgraph_agent import LangGraphAgent
 from app.config import get_settings
 from app.ports.agents import QueryAgent
+from app.ports.attachments import AttachmentMetadataPort
+from app.services.invoices import RegisterAttachment
 
 # memory = SqliteSaver.from_conn_string(":memory:")
 DEFAULT_SYSTEM_PROMPT = """You are a smart research assistant. Use the search engine to look up information. \
@@ -32,6 +34,10 @@ def _build_default_model():
     return model
 
 
+def _build_default_attachments() -> AttachmentMetadataPort:
+    pass
+
+
 # NOTE: Consider passing a model factory instead of a model directly
 def build_query_agent_with_search(
     checkpointer,
@@ -47,3 +53,9 @@ def build_query_agent_with_search(
     model = model or _build_default_model()
     tools = tools or _build_default_tools()
     return LangGraphAgent(model, tools, checkpointer, system)
+
+
+def build_register_attachment_use_case(
+    attachments: AttachmentMetadataPort | None = None,
+) -> RegisterAttachment:
+    attachments = attachments or _build_default_attachments()
