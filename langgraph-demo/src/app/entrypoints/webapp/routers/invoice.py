@@ -30,7 +30,7 @@ async def init_upload(
     cmd = RegisterAttachmentCommand(
         user_id=fake_user_id,
         content_type=payload.content_type,
-        original_filename=payload.filename,
+        original_filename=payload.original_filename,
         purpose=purpose,
         size_bytes=payload.size_bytes,
     )

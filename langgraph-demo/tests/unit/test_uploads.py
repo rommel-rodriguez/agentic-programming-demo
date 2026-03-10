@@ -18,7 +18,7 @@ from app.services.invoices import UploadAttachmentContent
 def make_doc(*, content_type: str, size_bytes: int) -> Document:
     return Document(
         user_id=1,
-        filename="invoice_1",
+        original_filename="invoice_1",
         content_type=content_type,
         purpose=DocumentPurpose.CONTEXT,
         size_bytes=size_bytes,
@@ -124,7 +124,7 @@ class FakeAttachments(AttachmentMetadataPort):
         self,
         *,
         user_id: int,
-        filename: str,
+        original_filename: str | None,
         content_type: str,
         size_bytes: int,
         purpose: DocumentPurpose
@@ -138,7 +138,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     storage_objects: dict[str, dict] = {}
     doc = Document(
         user_id=1,
-        filename="invoice_1",
+        original_filename="invoice_1",
         content_type="application/invalid-mimetype",
         purpose=DocumentPurpose.CONTEXT,
         size_bytes=1024,
@@ -170,7 +170,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     fake_content: bytes = "content1".encode("utf-8")
     doc = Document(
         user_id=1,
-        filename="invoice_1",
+        original_filename="invoice_1",
         content_type="application/pdf",
         purpose=DocumentPurpose.CONTEXT,
         size_bytes=len(fake_content),
@@ -205,7 +205,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     storage_objects: dict[str, dict] = {}
     doc = Document(
         user_id=1,
-        filename="invoice_1",
+        original_filename="invoice_1",
         content_type="application/pdf",
         purpose=DocumentPurpose.CONTEXT,
         size_bytes=1024,

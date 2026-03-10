@@ -49,7 +49,7 @@ class RegisterAttachment:
 
         attachment_id = await self._attachments.register_pending(
             user_id=cmd.user_id,
-            filename=cmd.original_filename,
+            original_filename=cmd.original_filename,
             content_type=cmd.content_type,
             size_bytes=cmd.size_bytes,
             purpose=cmd.purpose,

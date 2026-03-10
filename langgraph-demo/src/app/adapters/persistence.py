@@ -34,7 +34,7 @@ class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
         self,
         *,
         user_id: int,
-        filename: str | None,
+        original_filename: str | None,
         content_type: str,
         size_bytes: int,
         purpose: DocumentPurpose
@@ -43,7 +43,7 @@ class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
         # Function Logic Here
         document = Document(
             user_id=user_id,
-            filename=filename,
+            original_filename=original_filename,
             content_type=content_type,
             size_bytes=size_bytes,
             purpose=purpose,

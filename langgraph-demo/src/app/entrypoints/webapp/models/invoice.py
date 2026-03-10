@@ -4,7 +4,7 @@ from pydantic import BaseModel
 
 
 class UploadInitIn(BaseModel):
-    filename: str
+    original_filename: str | None = None
     content_type: str
     size_bytes: int
 

@@ -89,7 +89,7 @@ documents = Table(
     mapper_registry.metadata,
     Column("id", Uuid(as_uuid=True), primary_key=True),
     Column("user_id", ForeignKey("users.id"), nullable=False),
-    Column("filename", String(255), nullable=False),
+    Column("original_filename", String(255), nullable=True),
     Column("content_type", String(100), nullable=False),
     Column("size_bytes", Integer, nullable=False),
     Column(

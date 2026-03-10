@@ -50,10 +50,10 @@ class DocumentPurpose(StrEnum):
 @dataclass(frozen=True, slots=True, kw_only=True)
 class Document:
     user_id: int
-    filename: str
     content_type: str
     size_bytes: int
     purpose: DocumentPurpose
+    original_filename: str | None = None
 
     id: UUID = field(default_factory=uuid4)
     status: DocumentStatus = DocumentStatus.PENDING_UPLOAD
@@ -69,8 +69,8 @@ class Document:
     error_message: str | None = None
 
     def __post_init__(self) -> None:
-        if not self.filename.strip():
-            raise ValueError("filename cannot be empty")
+        if self.original_filename is not None and not self.original_filename.strip():
+            raise ValueError("original_filename cannot be empty when provided")
         if self.size_bytes < 0:
             raise ValueError("size_bytes must be >= 0")
         if "/" not in self.content_type:
