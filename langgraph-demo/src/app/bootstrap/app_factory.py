@@ -13,6 +13,7 @@ from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from app.bootstrap.logging import configure_logging
+from app.bootstrap.persistence import configure_persistence
 from app.config import get_settings
 from app.entrypoints.webapp.routers.invoice import router as invoice_router
 from app.entrypoints.webapp.routers.workflows import router as wf_router
@@ -58,6 +59,7 @@ def _build_lifespan(checkpointer_backend: str):
     @asynccontextmanager
     async def lifespan(app: FastAPI):
         configure_logging()
+        await configure_persistence()  # Starts ORM mappers
 
         settings = get_settings()
         #  TODO: This is the flag for the checkpointer backend, a flag for the
