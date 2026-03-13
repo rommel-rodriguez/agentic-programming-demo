@@ -25,9 +25,6 @@ class SQLAlchemyUnitOfWork(UnitOfWork):
             if self.session is not None:
                 await self.session.close()
 
-    async def commit(self) -> None:
-        await self._commit()
-
     async def rollback(self) -> None:
         if self.session is not None:
             await self.session.rollback()
