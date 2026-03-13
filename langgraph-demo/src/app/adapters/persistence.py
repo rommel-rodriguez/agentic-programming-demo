@@ -1,15 +1,16 @@
 from uuid import UUID
 
 import sqlalchemy
-import sqlalchemy.exc
+from sqlalchemy.exc import IntegrityError, SQLAlchemyError
 
 from app.domain.models import Document, DocumentPurpose
 from app.ports.attachments import AttachmentMetadataPort
+from app.ports.errors import AttachmentRepositoryError
 
 
 class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
-    def __init__(self, session_factory):
-        self.session_factory = session_factory
+    def __init__(self, session):
+        self.session = session
 
     async def mark_uploaded(
         self,
@@ -19,15 +20,11 @@ class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
         size_bytes: int,
         checksum_sha256: str,
     ) -> None:
-        self.session = self.session_factory()
         # Function Logic Here
-        self.session.close()
         raise NotImplementedError
 
     async def exists_pending(self, attachment_id: UUID) -> bool:
-        self.session = self.session_factory()
         # Function Logic Here
-        self.session.close()
         raise NotImplementedError
 
     async def register_pending(
@@ -39,7 +36,6 @@ class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
         size_bytes: int,
         purpose: DocumentPurpose
     ) -> UUID:
-        self.session = self.session_factory()
         # Function Logic Here
         document = Document(
             user_id=user_id,
@@ -50,8 +46,13 @@ class SQLAlchemyAttachmentMetadata(AttachmentMetadataPort):
         )
         try:
             self.session.add(document)
+            await self.session.flush()
             return document.id
-        except sqlalchemy.exc.SQLAlchemyError as sqle:
-            raise ValueError() from sqle  # TODO: Replace for persistence layer level error
-        finally:
-            self.session.close()
+        except IntegrityError as e:
+            raise AttachmentRepositoryError(
+                "failed to register attachment: integrity error"
+            ) from e  # TODO: Replace for persistence layer level error
+        except SQLAlchemyError as e:
+            raise AttachmentRepositoryError(
+                "failed to register attachment"
+            ) from e  # TODO: Replace for persistence layer level error
