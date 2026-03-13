@@ -62,8 +62,6 @@ def _build_lifespan(checkpointer_backend: str):
         await configure_persistence()  # Starts ORM mappers
 
         settings = get_settings()
-        #  TODO: This is the flag for the checkpointer backend, a flag for the
-        #  application model backend is still required.
         if checkpointer_backend == "memory":
             app.state.checkpointer = InMemorySaver()
             app.state.pg_pool = None
@@ -72,12 +70,6 @@ def _build_lifespan(checkpointer_backend: str):
 
         db_url = str(settings.db_url)
         logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
-        # pool = ConnectionPool(
-        #     db_url,
-        #     max_size=10,
-        #     connection_class=Connection[DictRow],  # Needed ore mypy complains
-        #     kwargs={"autocommit": True, "row_factory": dict_row},
-        # )
         lg_pool = build_langgraph_pool(db_url)
         app_pool = build_langgraph_pool(db_url)
         await lg_pool.open(wait=True)
@@ -116,8 +108,6 @@ async def handle_application_error(request, exc):
     )
 
 
-# TODO: Modify this entrypoint so we can use either an in-memory checkpointer or a
-# production checkpointer. Nest the lifespan function inside if needed.
 def create_app(*, checkpointer_backend: str = "postgres") -> FastAPI:
     app = FastAPI(lifespan=_build_lifespan(checkpointer_backend))
     app.add_middleware(CorrelationIdMiddleware)
