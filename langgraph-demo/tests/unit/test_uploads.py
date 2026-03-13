@@ -6,6 +6,7 @@ from app.domain.models import Document, DocumentPurpose, DocumentStatus
 from app.ports.attachments import AttachmentMetadataPort
 from app.ports.errors import MediaStorageError
 from app.ports.media_storage import MediaStoragePort
+from app.ports.uow import UnitOfWork
 from app.services.commands import UploadAttachmentContentCommand
 from app.services.errors import (
     AttachmentNotPendingError,
@@ -28,11 +29,8 @@ def make_doc(*, content_type: str, size_bytes: int) -> Document:
 def make_sut(documents: dict[UUID, Document]):
     storage = FakeStorage(objects={})
     attachments = FakeAttachments(documents=documents)
-    return (
-        UploadAttachmentContent(storage=storage, attachments=attachments),
-        storage,
-        attachments,
-    )
+    uow = FakeUnitOfWork(attachments)
+    return UploadAttachmentContent(storage=storage, uow=uow), storage, attachments, uow
 
 
 class FakeStorage(MediaStoragePort):
@@ -132,6 +130,20 @@ class FakeAttachments(AttachmentMetadataPort):
         return uuid4()
 
 
+class FakeUnitOfWork(UnitOfWork):
+    def __init__(self, attachments: AttachmentMetadataPort):
+        super().__init__()
+        self.attachments = attachments
+        self.committed = False
+        self.rolled_back = False
+
+    async def _commit(self) -> None:
+        self.committed = True
+
+    async def rollback(self) -> None:
+        self.rolled_back = True
+
+
 @pytest.mark.asyncio
 async def test_upload_attachment_content_rejects_non_valid_filetypes():
     documents = dict()
@@ -153,7 +165,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     )
     upat_uc = UploadAttachmentContent(
         storage=storage,
-        attachments=attachments,
+        uow=FakeUnitOfWork(attachments),
     )
     with pytest.raises(UnsupportedMimeTypeError, match="valid MIME type"):
         await upat_uc(cmd)
@@ -161,6 +173,8 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     assert len(storage.save_calls) == 0
     assert len(attachments.exists_pending_calls) == 0
     assert len(attachments.mark_uploaded_calls) == 0
+    assert upat_uc._uow._committed is False
+    assert upat_uc._uow.rolled_back is False  # type:ignore
 
 
 @pytest.mark.asyncio
@@ -185,7 +199,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     )
     upat_uc = UploadAttachmentContent(
         storage=storage,
-        attachments=attachments,
+        uow=FakeUnitOfWork(attachments),
     )
     await upat_uc(cmd)
     assert len(storage.save_calls) == 1
@@ -197,6 +211,8 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     assert len(saved_doc.checksum_sha256) == 64
     assert storage.save_calls[0][0] == doc.id
     assert attachments.mark_uploaded_calls[0][0] == doc.id
+    assert upat_uc._uow._committed is True
+    assert upat_uc._uow.rolled_back is False  # type:ignore
 
 
 @pytest.mark.asyncio
@@ -225,7 +241,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     )
     upat_uc = UploadAttachmentContent(
         storage=storage,
-        attachments=attachments,
+        uow=FakeUnitOfWork(attachments),
     )
     with pytest.raises(AttachmentNotPendingError, match="not pending"):
         await upat_uc(cmd)
@@ -248,7 +264,10 @@ async def test_upload_attachment_content_propagate_storage_error_and_skips_mark_
         attachment_id=doc.id, content_type=doc.content_type, content=b"content1"
     )
 
-    use_case = UploadAttachmentContent(storage=storage, attachments=attachments)
+    use_case = UploadAttachmentContent(
+        storage=storage,
+        uow=FakeUnitOfWork(attachments),
+    )
 
     with pytest.raises(StorageUnavailableError) as exc_info:
         await use_case(cmd)
