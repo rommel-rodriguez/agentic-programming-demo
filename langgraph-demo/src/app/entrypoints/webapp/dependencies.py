@@ -1,11 +1,18 @@
 from fastapi import Depends, Request
 
-from app.bootstrap.services import build_query_agent_with_search
+from app.bootstrap.services import (
+    build_query_agent_with_search,
+    build_register_attachment_use_case,
+)
 from app.ports.agents import QueryAgent
 
 
 def get_langgraph_db_pool(request: Request):
     return request.app.state.langgraph_pool
+
+
+def get_session_factory(request: Request):
+    return request.app.state.session_factory
 
 
 def get_app_db_pool(request: Request):
@@ -19,8 +26,8 @@ def get_checkpointer(request: Request):
 # TODO: Create a different DB Pool and replace the dependency with that pool
 # in order other db operations not to use the same pool LangGraph is using
 # which might have settings not apt for every use case.
-def get_register_attachmetn_uc(app_pool=Depends(get_app_db_pool)):
-    return app_pool
+def get_register_attachment_uc(session_factory=Depends(get_session_factory)):
+    return build_register_attachment_use_case(session_factory)
 
 
 def get_query_agent_with_search(
