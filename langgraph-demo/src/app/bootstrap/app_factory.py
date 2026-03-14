@@ -8,13 +8,12 @@ from fastapi.responses import JSONResponse
 from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.checkpoint.postgres import PostgresSaver
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
-from psycopg import AsyncConnection, Connection
-from psycopg.rows import DictRow, dict_row
-from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from app.bootstrap.logging import configure_logging
 from app.bootstrap.persistence import (
+    build_app_pool,
     build_engine,
+    build_langgraph_pool,
     build_session_factory,
     configure_persistence,
 )
@@ -24,39 +23,6 @@ from app.entrypoints.webapp.routers.workflows import router as wf_router
 from app.services.errors import ApplicationError
 
 logger = logging.getLogger(__name__)
-
-
-def build_langgraph_pool(dsn: str) -> AsyncConnectionPool[AsyncConnection[DictRow]]:
-    return AsyncConnectionPool(
-        conninfo=dsn,
-        min_size=1,
-        max_size=5,
-        timeout=10,
-        max_lifetime=1800,
-        max_idle=300,
-        open=False,
-        kwargs={"autocommit": True, "row_factory": dict_row},
-        check=AsyncConnectionPool[AsyncConnection[DictRow]].check_connection,
-        name="langraph_pool",
-    )
-
-
-def build_app_pool(dsn: str) -> AsyncConnectionPool:
-    return AsyncConnectionPool(
-        conninfo=dsn,
-        min_size=2,
-        max_size=20,
-        timeout=5,
-        max_waiting=50,
-        max_lifetime=3600,
-        max_idle=600,
-        open=False,
-        kwargs={
-            "autocommit": False,
-        },
-        check=AsyncConnectionPool.check_connection,
-        name="app_pool",
-    )
 
 
 def _build_lifespan(checkpointer_backend: str):
@@ -73,9 +39,10 @@ def _build_lifespan(checkpointer_backend: str):
             return
 
         db_url = str(settings.db_url)
+        db_url_sqlalchemy = str(settings.db_url_sqlalchemy)
         logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
         lg_pool = build_langgraph_pool(db_url)
-        app_pool = build_app_pool(db_url)
+        app_pool = build_app_pool(db_url_sqlalchemy)
         await lg_pool.open(wait=True)
         await app_pool.open(wait=True)
 

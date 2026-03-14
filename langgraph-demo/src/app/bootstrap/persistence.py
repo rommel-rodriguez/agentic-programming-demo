@@ -1,3 +1,6 @@
+from psycopg import AsyncConnection, Connection
+from psycopg.rows import DictRow, dict_row
+from psycopg_pool import AsyncConnectionPool, ConnectionPool
 from sqlalchemy.ext.asyncio import (
     AsyncEngine,
     AsyncSession,
@@ -7,6 +10,39 @@ from sqlalchemy.ext.asyncio import (
 
 from app import config
 from app.adapters.orm import start_mappers
+
+
+def build_langgraph_pool(dsn: str) -> AsyncConnectionPool[AsyncConnection[DictRow]]:
+    return AsyncConnectionPool(
+        conninfo=dsn,
+        min_size=1,
+        max_size=5,
+        timeout=10,
+        max_lifetime=1800,
+        max_idle=300,
+        open=False,
+        kwargs={"autocommit": True, "row_factory": dict_row},
+        check=AsyncConnectionPool[AsyncConnection[DictRow]].check_connection,
+        name="langraph_pool",
+    )
+
+
+def build_app_pool(dsn: str) -> AsyncConnectionPool:
+    return AsyncConnectionPool(
+        conninfo=dsn,
+        min_size=2,
+        max_size=20,
+        timeout=5,
+        max_waiting=50,
+        max_lifetime=3600,
+        max_idle=600,
+        open=False,
+        kwargs={
+            "autocommit": False,
+        },
+        check=AsyncConnectionPool.check_connection,
+        name="app_pool",
+    )
 
 
 def build_engine() -> AsyncEngine:
