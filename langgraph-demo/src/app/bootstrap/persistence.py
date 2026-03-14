@@ -23,9 +23,9 @@ def build_engine() -> AsyncEngine:
     )
 
 
-def build_session_factory():
+def build_session_factory(engine: AsyncEngine):
     db_url = str(config.get_settings().db_url_sqlalchemy)
-    engine = build_engine()
+    # engine = build_engine()
     return async_sessionmaker(
         bind=engine,
         autoflush=False,

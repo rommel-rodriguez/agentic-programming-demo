@@ -13,7 +13,11 @@ from psycopg.rows import DictRow, dict_row
 from psycopg_pool import AsyncConnectionPool, ConnectionPool
 
 from app.bootstrap.logging import configure_logging
-from app.bootstrap.persistence import configure_persistence
+from app.bootstrap.persistence import (
+    build_engine,
+    build_session_factory,
+    configure_persistence,
+)
 from app.config import get_settings
 from app.entrypoints.webapp.routers.invoice import router as invoice_router
 from app.entrypoints.webapp.routers.workflows import router as wf_router
@@ -71,12 +75,14 @@ def _build_lifespan(checkpointer_backend: str):
         db_url = str(settings.db_url)
         logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
         lg_pool = build_langgraph_pool(db_url)
-        app_pool = build_langgraph_pool(db_url)
+        app_pool = build_app_pool(db_url)
         await lg_pool.open(wait=True)
         await app_pool.open(wait=True)
 
         app.state.langgraph_pool = lg_pool
-        app.state.app_pool = lg_pool
+        engine = build_engine()
+        app.state.session_factory = build_session_factory(engine)
+        app.state.app_pool = app_pool
         app.state.checkpointer = AsyncPostgresSaver(lg_pool)
         await app.state.checkpointer.setup()
         try:
@@ -84,6 +90,7 @@ def _build_lifespan(checkpointer_backend: str):
         finally:
             await lg_pool.close()
             await app_pool.close()
+            await engine.dispose()
 
     return lifespan
 
