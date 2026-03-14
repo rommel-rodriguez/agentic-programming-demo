@@ -21,7 +21,7 @@ def app_memory():
 
 @pytest.fixture()
 def app_postgres():
-    return create_app(checkpointer_backend="memory")
+    return create_app(checkpointer_backend="postgres")
 
 
 # @pytest.fixture()
