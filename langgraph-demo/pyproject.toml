@@ -52,6 +52,7 @@ dev = [
     "ruff==0.12.5",
     "slotscheck==0.19.1",
     "ipykernel",
+    "aiosqlite>=0.22,<0.23",
     { include-group = "test" },
 ]
 test = [
