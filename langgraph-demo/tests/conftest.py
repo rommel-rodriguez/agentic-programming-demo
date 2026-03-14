@@ -1,5 +1,3 @@
-from venv import create
-
 import httpx
 import pytest
 from fastapi.testclient import TestClient
@@ -15,6 +13,11 @@ TEST_BASE_URL = "http://testserver"
 
 
 @pytest.fixture()
+def in_memory_db():
+    return create_app(checkpointer_backend="memory")
+
+
+@pytest.fixture()
 def app_memory():
     return create_app(checkpointer_backend="memory")
 
@@ -22,13 +25,6 @@ def app_memory():
 @pytest.fixture()
 def app_postgres():
     return create_app(checkpointer_backend="postgres")
-
-
-# @pytest.fixture()
-# async def db():
-#     await database.connect()
-#     yield
-#     await database.disconnect()
 
 
 @pytest.fixture(scope="session")
