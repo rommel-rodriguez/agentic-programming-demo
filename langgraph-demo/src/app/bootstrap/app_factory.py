@@ -39,10 +39,9 @@ def _build_lifespan(checkpointer_backend: str):
             return
 
         db_url = str(settings.db_url)
-        db_url_sqlalchemy = str(settings.db_url_sqlalchemy)
         logger.info(f"Starting db with db_url: SHOW ONLY NON-PASSWORD")
         lg_pool = build_langgraph_pool(db_url)
-        app_pool = build_app_pool(db_url_sqlalchemy)
+        app_pool = build_app_pool(db_url)
         await lg_pool.open(wait=True)
         await app_pool.open(wait=True)
 
