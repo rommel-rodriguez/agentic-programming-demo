@@ -47,7 +47,7 @@ class DocumentPurpose(StrEnum):
     CONTEXT = "context"
 
 
-@dataclass(frozen=True, slots=True, kw_only=True)
+@dataclass(kw_only=True)
 class Document:
     user_id: int
     content_type: str
