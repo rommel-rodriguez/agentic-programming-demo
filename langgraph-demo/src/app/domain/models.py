@@ -1,4 +1,4 @@
-from dataclasses import dataclass, field, replace
+from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from enum import StrEnum
 from typing import Any, Optional
@@ -82,32 +82,26 @@ class Document:
         storage_key: str,
         checksum_sha256: str,
         uploaded_at: datetime | None = None
-    ) -> "Document":
+    ):
         if self.status != DocumentStatus.PENDING_UPLOAD:
             raise ValueError("document must be pending upload before completion")
-        return replace(
-            self,
-            status=DocumentStatus.UPLOADED,
-            storage_key=storage_key,
-            checksum_sha256=checksum_sha256,
-            uploaded_at=uploaded_at or datetime.now(timezone.utc),
-        )
+        self.status = DocumentStatus.UPLOADED
+        self.storage_key = storage_key
+        self.checksum_sha256 = checksum_sha256
+        self.uploaded_at = uploaded_at or datetime.now(timezone.utc)
+        return self
 
     def mark_ready(self, *, chunk_count: int) -> "Document":
         if self.status not in {DocumentStatus.UPLOADED, DocumentStatus.PROCESSING}:
             raise ValueError("document must be uploaded/processing before ready")
-        return replace(
-            self,
-            status=DocumentStatus.READY,
-            chunk_count=chunk_count,
-            processed_at=datetime.now(timezone.utc),
-            error_message=None,
-        )
+        self.status = DocumentStatus.READY
+        self.chunk_count = chunk_count
+        self.processed_at = datetime.now(timezone.utc)
+        self.error_message = None
+        return self
 
     def mark_failed(self, *, error_message: str) -> "Document":
-        return replace(
-            self,
-            status=DocumentStatus.FAILED,
-            processed_at=datetime.now(timezone.utc),
-            error_message=error_message,
-        )
+        self.status = DocumentStatus.FAILED
+        self.processed_at = datetime.now(timezone.utc)
+        self.error_message = error_message
+        return self
