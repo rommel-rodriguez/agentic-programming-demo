@@ -3,6 +3,7 @@ import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
 from httpx import ASGITransport
+from sqlalchemy import StaticPool
 from sqlalchemy.ext.asyncio import async_sessionmaker, create_async_engine
 from sqlalchemy.orm import clear_mappers
 
@@ -24,18 +25,45 @@ def mappers():
     clear_mappers()
 
 
-@pytest_asyncio.fixture()
+@pytest_asyncio.fixture(scope="session", loop_scope="session")
 async def in_memory_db():
-    engine = create_async_engine("sqlite+aiosqlite:///:memory:")
+    engine = create_async_engine(
+        "sqlite+aiosqlite:///:memory:",
+        poolclass=StaticPool,
+        connect_args={"check_same_thread": False},
+    )
     # mapper_registry.metadata.create_all(engine)
     async with engine.begin() as conn:
         await conn.run_sync(mapper_registry.metadata.create_all)
-    return engine
+    try:
+        yield engine
+    finally:
+        await engine.dispose()
 
 
-@pytest.fixture
-def in_memory_session_factory(in_memory_db):
-    return async_sessionmaker(in_memory_db)
+@pytest_asyncio.fixture
+async def in_memory_session_factory(in_memory_db):
+    async with in_memory_db.connect() as conn:
+        outer_tx = await conn.begin()
+        factory = async_sessionmaker(
+            bind=conn, join_transaction_mode="create_savepoint", expire_on_commit=False
+        )
+        try:
+            yield factory
+        finally:
+            await outer_tx.rollback()
+
+
+@pytest_asyncio.fixture
+async def in_memory_db_session(in_memory_db):
+    async with in_memory_db.connect() as conn:
+        outer_tx = await conn.begin()  # Start outer transaction
+        Session = async_sessionmaker(
+            bind=conn, expire_on_commit=False, join_transaction_mode="create_savepoint"
+        )
+        async with Session() as session:
+            yield session
+        await outer_tx.rollback()
 
 
 @pytest.fixture
