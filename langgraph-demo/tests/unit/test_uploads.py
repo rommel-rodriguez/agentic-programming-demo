@@ -30,26 +30,37 @@ def make_sut(documents: dict[UUID, Document]):
     storage = FakeStorage(objects={})
     attachments = FakeAttachments(documents=documents)
     uow = FakeUnitOfWork(attachments)
-    return UploadAttachmentContent(storage=storage, uow=uow), storage, attachments, uow
+    return (
+        UploadAttachmentContent(
+            storage=storage,
+            uow=uow,
+            key_builder=FakeStorageKeyBuilder(),
+        ),
+        storage,
+        attachments,
+        uow,
+    )
+
+
+class FakeStorageKeyBuilder:
+    def attachment(self, *, tenant_id: str, attachment_id: UUID, yyyy: int, mm: int) -> str:
+        return str(attachment_id)
 
 
 class FakeStorage(MediaStoragePort):
     def __init__(self, objects: dict[str, dict] | None = None):
         self.objects: dict[str, dict] = objects or {}
-        self.save_calls: list[tuple[UUID | str, bytes, str, str | None, str]] = []
+        self.save_calls: list[tuple[str, bytes, str, str | None, str]] = []
 
     async def save(
         self,
         *,
-        key: UUID | str,
+        storage_key: str,
         content: bytes,
         content_type: str,
         original_filename: str | None = None
     ) -> str:
-        # TODO: Figure out how to derive the storage_ref properly
-        storage_key = str(key)
         doc = {
-            "key": key,
             "storage_key": storage_key,
             "content": content,
             "content_type": content_type,
@@ -57,24 +68,24 @@ class FakeStorage(MediaStoragePort):
         }
         self.objects[storage_key] = doc
         self.save_calls.append(
-            (key, content, content_type, original_filename, storage_key)
+            (storage_key, content, content_type, original_filename, storage_key)
         )
         return storage_key
 
 
 class FakeFailingStorage(MediaStoragePort):
     def __init__(self, objects: dict[str, dict] | None = None):
-        self.save_calls: list[tuple[UUID | str, bytes, str, str | None]] = []
+        self.save_calls: list[tuple[str, bytes, str, str | None]] = []
 
     async def save(
         self,
         *,
-        key: UUID | str,
+        storage_key: str,
         content: bytes,
         content_type: str,
         original_filename: str | None = None
     ) -> str:
-        self.save_calls.append((key, content, content_type, original_filename))
+        self.save_calls.append((storage_key, content, content_type, original_filename))
         raise MediaStorageError("storage unavailable")
 
 
@@ -159,6 +170,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     storage = FakeStorage(objects=storage_objects)
     attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
+        user_id=1,
         attachment_id=doc.id,
         content_type=doc.content_type,
         content="content1".encode("utf-8"),
@@ -166,6 +178,7 @@ async def test_upload_attachment_content_rejects_non_valid_filetypes():
     upat_uc = UploadAttachmentContent(
         storage=storage,
         uow=FakeUnitOfWork(attachments),
+        key_builder=FakeStorageKeyBuilder(),
     )
     with pytest.raises(UnsupportedMimeTypeError, match="valid MIME type"):
         await upat_uc(cmd)
@@ -193,6 +206,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     storage = FakeStorage(objects=storage_objects)
     attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
+        user_id=1,
         attachment_id=doc.id,
         content_type=doc.content_type,
         content=fake_content,
@@ -200,6 +214,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     upat_uc = UploadAttachmentContent(
         storage=storage,
         uow=FakeUnitOfWork(attachments),
+        key_builder=FakeStorageKeyBuilder(),
     )
     await upat_uc(cmd)
     assert len(storage.save_calls) == 1
@@ -209,7 +224,7 @@ async def test_upload_attachment_content_accepts_valid_mimetypes():
     assert saved_doc.storage_key == storage.save_calls[0][4]
     assert saved_doc.checksum_sha256 is not None
     assert len(saved_doc.checksum_sha256) == 64
-    assert storage.save_calls[0][0] == doc.id
+    assert storage.save_calls[0][0] == str(doc.id)
     assert attachments.mark_uploaded_calls[0][0] == doc.id
     assert upat_uc._uow._committed is True
     assert upat_uc._uow.rolled_back is False  # type:ignore
@@ -235,6 +250,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     storage = FakeStorage(objects=storage_objects)
     attachments = FakeAttachments(documents=documents)
     cmd = UploadAttachmentContentCommand(
+        user_id=1,
         attachment_id=doc.id,
         content_type=doc.content_type,
         content="content1".encode("utf-8"),
@@ -242,6 +258,7 @@ async def test_upload_attachment_content_rejects_non_pending_documents():
     upat_uc = UploadAttachmentContent(
         storage=storage,
         uow=FakeUnitOfWork(attachments),
+        key_builder=FakeStorageKeyBuilder(),
     )
     with pytest.raises(AttachmentNotPendingError, match="not pending"):
         await upat_uc(cmd)
@@ -261,12 +278,16 @@ async def test_upload_attachment_content_propagate_storage_error_and_skips_mark_
     storage = FakeFailingStorage()
 
     cmd = UploadAttachmentContentCommand(
-        attachment_id=doc.id, content_type=doc.content_type, content=b"content1"
+        user_id=1,
+        attachment_id=doc.id,
+        content_type=doc.content_type,
+        content=b"content1",
     )
 
     use_case = UploadAttachmentContent(
         storage=storage,
         uow=FakeUnitOfWork(attachments),
+        key_builder=FakeStorageKeyBuilder(),
     )
 
     with pytest.raises(StorageUnavailableError) as exc_info:
