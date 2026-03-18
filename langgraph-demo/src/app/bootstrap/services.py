@@ -1,4 +1,5 @@
 import logging
+from typing import Any
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_tavily import TavilySearch
@@ -63,7 +64,7 @@ def build_query_agent_with_search(
 
 
 def build_register_attachment_use_case(
-    session_factory,
+    session_factory: Any | None,
     uow: UnitOfWork | None = None,
 ) -> RegisterAttachment:
     if uow is None and session_factory is None:
