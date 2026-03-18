@@ -24,6 +24,7 @@ class RegisterAttachmentCommand(Command):
 
 @dataclass(frozen=True, slots=True)
 class UploadAttachmentContentCommand(Command):
+    user_id: int
     attachment_id: UUID
     content_type: str
     content: bytes
