@@ -1,5 +1,6 @@
 from fastapi import Depends, Request
 
+from app.bootstrap.invoice_services import build_upload_attachment_use_case
 from app.bootstrap.services import (
     build_query_agent_with_search,
     build_register_attachment_use_case,
@@ -28,6 +29,10 @@ def get_checkpointer(request: Request):
 # which might have settings not apt for every use case.
 def get_register_attachment_uc(session_factory=Depends(get_session_factory)):
     return build_register_attachment_use_case(session_factory)
+
+
+def get_upload_attachment_uc(session_factory=Depends(get_session_factory)):
+    return build_upload_attachment_use_case(session_factory=session_factory)
 
 
 def get_query_agent_with_search(
