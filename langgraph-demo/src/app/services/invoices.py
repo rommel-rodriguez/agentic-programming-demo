@@ -105,7 +105,13 @@ class UploadAttachmentContent:
                     original_filename=cmd.original_filename,
                 )
             except MediaStorageError as e:
-                logger.error(f"Storage to media backend failed with error: {e}")
+                logger.exception(
+                    "Storage save failed",
+                    extra={
+                        "attachment_id": str(cmd.attachment_id),
+                        "content_type": cmd.content_type,
+                    },
+                )
                 raise StorageUnavailableError() from e
 
             try:
