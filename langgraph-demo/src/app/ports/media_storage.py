@@ -49,7 +49,7 @@ class MediaStoragePort(Protocol):
         """Read full object content."""
         ...
 
-    async def open_read(
+    def open_read(
         self,
         *,
         key: str,
