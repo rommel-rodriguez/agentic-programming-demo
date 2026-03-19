@@ -1,16 +1,21 @@
-import logging
-import uuid
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
 
 from app.domain.models import DocumentPurpose
-from app.entrypoints.webapp.dependencies import get_register_attachment_uc
+from app.entrypoints.webapp.dependencies import (
+    get_register_attachment_uc,
+    get_upload_attachment_uc,
+)
 from app.entrypoints.webapp.models.invoice import (
     RunIn,
     UploadInitIn,
     UploadInitOut,
 )
-from app.services.commands import RegisterAttachmentCommand
+from app.services.commands import (
+    RegisterAttachmentCommand,
+    UploadAttachmentContentCommand,
+)
 from app.services.invoices import RegisterAttachment
 
 router = APIRouter(tags=["agent-workflows", "invoice-parsing"])
@@ -34,17 +39,38 @@ async def init_upload(
         purpose=purpose,
         size_bytes=payload.size_bytes,
     )
-    id = await register_attachment_uc(cmd)
+    id_ = await register_attachment_uc(cmd)
     # DB: insert attachment with status='pending_upload' + metadata
-    return UploadInitOut(id=id)
+    return UploadInitOut(id=id_)
 
 
-@router.put("/attachments/{id}/content")
-async def upload_content(id: str, file: UploadFile = File(...)):
+@router.put("/attachments/{id_}/content")
+async def upload_content(
+    id_: str, file: UploadFile = File(...), upload_uc=Depends(get_upload_attachment_uc)
+):
+
+    try:
+        attachment_id = UUID(id_)
+    except Exception as e:
+        raise HTTPException(status_code=400, detail="Must be have a valid document id")
     # TODO: This check should not be a HTTP layer responsibility, delegate this for
     # the services to take care off.
-    if file.content_type != "application/pdf":
-        raise HTTPException(status_code=400, detail="Must be PDF file")
+    # if file.content_type != "application/pdf":
+    #     raise HTTPException(status_code=400, detail="Must be PDF file")
+    content_type = str(file.content_type) or "missing-content-type"
+    content = await file.read()
+
+    cmd = UploadAttachmentContentCommand(
+        user_id=1,
+        attachment_id=attachment_id,
+        content_type=content_type,
+        content=content,
+        original_filename="Fake original filename",
+    )
+    try:
+        await upload_uc(cmd)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="")
     # TODO: Implement service, or just code snippet, that takes care of media storage
     # storage.save(id, file)
     # DB: set status='uploaded'
