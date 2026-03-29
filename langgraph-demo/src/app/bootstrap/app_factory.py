@@ -62,7 +62,17 @@ def _build_lifespan(checkpointer_backend: str):
 
 
 async def http_exception_handle_logging(request, exc):
-    logger.error(f"HTTPException {exc.status_code} {exc.detail}")
+    log_fn = logger.error if exc.status_code >= 500 else logger.warning
+    log_fn(
+        "HTTPException",
+        extra={
+            "status_code": exc.status_code,
+            "detail": exc.detail,
+            "method": request.method,
+            "path": str(request.url.path),
+        },
+        exc_info=exc,
+    )
     return await http_exception_handler(request, exc)
 
 
@@ -74,10 +84,37 @@ async def handle_application_error(request, exc):
         "attachment_metadata_update_error": status.HTTP_500_INTERNAL_SERVER_ERROR,
         "attachment_size_bytes_too_big": status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
     }
+    status_code = status_map.get(exc.code, 500)
+
+    log_fn = logger.error if status_code >= 500 else logger.warning
+    log_fn(
+        "ApplicationError",
+        extra={
+            "method": request.method,
+            "path": str(request.url.path),
+            "status_code": status_code,
+            "error_code": exc.code,
+            "error_message": str(exc),
+        },
+        exc_info=status_code >= 500,
+    )
 
     return JSONResponse(
-        status_code=status_map.get(exc.code, 500),
+        status_code=status_code,
         content={"error": {"code": exc.code, "message": str(exc)}},
+    )
+
+
+async def handle_unexpected_error(request, exc):
+    logger.exception(
+        "Unhandled exception",
+        extra={"method": request.method, "path": str(request.url.path)},
+    )
+    return JSONResponse(
+        status_code=500,
+        content={
+            "error": {"code": "internal_error", "message": "Internal server error"}
+        },
     )
 
 
@@ -88,4 +125,5 @@ def create_app(*, checkpointer_backend: str = "postgres") -> FastAPI:
     app.include_router(invoice_router, prefix="/invoice")
     app.add_exception_handler(HTTPException, http_exception_handle_logging)
     app.add_exception_handler(ApplicationError, handle_application_error)
+    app.add_exception_handler(Exception, handle_unexpected_error)
     return app
