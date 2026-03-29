@@ -67,10 +67,7 @@ async def upload_content(
         content=content,
         original_filename="Fake original filename",
     )
-    try:
-        await upload_uc(cmd)
-    except Exception as e:
-        raise HTTPException(status_code=500, detail="")
+    await upload_uc(cmd)
     # TODO: Implement service, or just code snippet, that takes care of media storage
     # storage.save(id, file)
     # DB: set status='uploaded'
