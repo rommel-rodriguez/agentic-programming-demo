@@ -20,3 +20,7 @@ class AttachmentMetadataUpdateError(ApplicationError):
 
 class AttachmentSizeBytesTooBig(ApplicationError):
     code = "attachment_size_bytes_too_big"
+
+
+class LlmModelError(ApplicationError):
+    code = "error_in_call_to_remote_model"
