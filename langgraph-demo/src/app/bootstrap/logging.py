@@ -3,15 +3,16 @@ import logging.config
 
 from app.config import get_settings
 
-LOG_LEVEL: int = logging.INFO
+default_log_level: int = logging.INFO
 
 # NOTE: Consider not making LOG_LEVEL dependend on environment variable
 
 
-def configure_logging():
+def configure_logging(log_level: int | None = None):
     settings = get_settings()
-    if settings.env == "dev":
-        LOG_LEVEL = logging.DEBUG
+    if log_level is None:
+        log_level = logging.DEBUG if settings.env == "dev" else default_log_level
+
     LOG_CONFIG = {
         "version": 1,
         "disable_existing_loggers": False,
@@ -33,11 +34,11 @@ def configure_logging():
             "console": {
                 "class": "logging.StreamHandler",
                 "formatter": "standard",
-                "level": LOG_LEVEL,
+                "level": log_level,
                 "filters": ["correlation_id"],
             }
         },
-        "root": {"handlers": ["console"], "level": LOG_LEVEL},
+        "root": {"handlers": ["console"], "level": log_level},
         "loggers": {
             # NOTE: Not a good practice to set a handler per logger, this is just a
             # workaround in order not to get so many DEBUG level messages from the
