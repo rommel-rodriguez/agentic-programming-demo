@@ -57,7 +57,7 @@ class InvoiceParsingAgent:
         self.graph = graph_builder.compile(checkpointer=checkpointer)
         self.tools = {t.name: t for t in tools}
 
-    def call_model(self, state: InvoiceAgentState):
+    async def call_model(self, state: InvoiceAgentState):
         invoice_text = state["invoice_text"]
 
         messages = [
@@ -65,7 +65,7 @@ class InvoiceParsingAgent:
         ]
         if self.system:
             messages = [SystemMessage(content=self.system), *messages]  # type: ignore
-        result = self.model.invoke(messages)
+        result = await self.model.ainvoke(messages)
         logger.info(f"Called llm start node and got: {result}")
         if not result.content:
             logger.error(f"JSON string not returned by the LLM, response:\n{result}")
