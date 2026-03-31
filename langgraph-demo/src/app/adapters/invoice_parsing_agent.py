@@ -34,7 +34,8 @@ class InvoiceParsingAgent:
     def __init__(
         self,
         model,
-        tools,
+        tools,  # NOTE: for now, without an execute node, tools does nothing, keeping
+        # it here just in case.
         checkpointer,
         thread_id: str,
         system: str = "",
@@ -147,3 +148,12 @@ class InvoiceParsingAgent:
                 )
 
         return self.graph.get_state(thread)
+
+    async def query(self, invoice_text: str):
+        thread = {"configurable": {"thread_id": self.thread_id}}
+        result: dict
+        result = await self.graph.ainvoke(
+            {"invoice_text": invoice_text, "max_revisions": self.max_revisions}, thread
+        )
+
+        return result
