@@ -73,17 +73,11 @@ class InvoiceParsingAgent:
         invoice_json = ai_json_string_strip_tags(result.content)
         return {"revision_number": 1, "invoice_json": invoice_json}
 
-    def reflection(self, state: InvoiceAgentState):
+    async def reflection(self, state: InvoiceAgentState):
         invoice_text = state["invoice_text"]
         invoice_json = state["invoice_json"]
         revision_number: int = state["revision_number"]
         max_revisions: int = state["max_revisions"]
-        # if revision_number >= max_revisions:
-        #     logger.warning(
-        #         "Max revisions reached (%s); returning last JSON without retry.",
-        #         max_revisions,
-        #     )
-        #     return {"revision_number": revision_number, "invoice_json": invoice_json}
         logger.info(
             f"Inside the reflection node, revision: {revision_number}"
             ", invoice_json: {invoice_json}"
@@ -108,7 +102,7 @@ class InvoiceParsingAgent:
             ),
             HumanMessage(content=reflection_prompt),
         ]
-        ai_message = self.model.invoke(messages)
+        ai_message = await self.model.ainvoke(messages)
         invoice_json = ai_message.content
         return {"revision_number": revision_number + 1, "invoice_json": invoice_json}
 
@@ -136,10 +130,10 @@ class InvoiceParsingAgent:
             return False
         return True
 
-    def query_stream(self, invoice_text: str | None):
+    async def query_astream(self, invoice_text: str | None):
         thread = {"configurable": {"thread_id": self.thread_id}}
 
-        for event in self.graph.stream(
+        async for event in self.graph.astream(
             {"invoice_text": invoice_text, "max_revisions": self.max_revisions}, thread
         ):
             for v in event.values():
@@ -147,7 +141,24 @@ class InvoiceParsingAgent:
                     f"revison: {v['revision_number']}, json: {v['invoice_json']}"
                 )
 
-        return self.graph.get_state(thread)
+        return self.graph.aget_state(thread)
+
+    async def query_astream_events(self, invoice_text: str | None):
+        thread = {"configurable": {"thread_id": self.thread_id}}
+
+        async for event in self.graph.astream_events(
+            {"invoice_text": invoice_text, "max_revisions": self.max_revisions},
+            thread,
+            version="v1",
+        ):
+            kind = event["event"]
+            logger.info(f"Received event of kind: {kind}")
+            for v in event.values():
+                logger.info(
+                    f"revison: {v['revision_number']}, json: {v['invoice_json']}"
+                )
+
+        return self.graph.aget_state(thread)
 
     async def query(self, invoice_text: str):
         thread = {"configurable": {"thread_id": self.thread_id}}
