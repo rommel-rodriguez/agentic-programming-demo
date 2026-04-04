@@ -4,9 +4,11 @@ from json import JSONDecodeError
 from fastapi import (
     APIRouter,
     Depends,
+    Header,
     HTTPException,
     WebSocket,
     WebSocketDisconnect,
+    WebSocketException,
     status,
 )
 from pydantic import ValidationError
@@ -40,7 +42,20 @@ async def query_lgmodel(
 
 @router.websocket("/ws")
 async def chat_websocket(websocket: WebSocket):
+    ticket = websocket.query_params.get("ticket")
+    if not ticket:
+        raise WebSocketException(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Missing ticket"
+        )
+
+    principal = verify_ws_ticket(ticket)
+    if not principal:
+        raise WebSocketException(
+            code=status.WS_1008_POLICY_VIOLATION, reason="Invalid ticket"
+        )
     await websocket.accept()
+    websocket.state.user_id = principal.user_id
+    websocket.state.tenant_id = principal.tenant_id
     try:
         while True:
             try:
@@ -78,3 +93,21 @@ async def chat_websocket(websocket: WebSocket):
             await websocket.send_json(reply.model_dump())
     except WebSocketDisconnect:
         logger.exception(f"client disconnected")
+
+
+@router.post("/wf/ws-ticket")
+async def create_ws_ticket(authorization: str | None = Header(default=None)):
+    if not authorization or not authorization.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing bearer token")
+
+    access_token = authorization.removeprefix("Bearer ").strip()
+    user = verify_access_token(access_token)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid bearer token")
+
+    ticket = mint_ws_ticket(
+        sub=user.user_id,
+        ttl_seconds=30,
+        single_use=True,
+    )
+    return {"ticket": ticket}
