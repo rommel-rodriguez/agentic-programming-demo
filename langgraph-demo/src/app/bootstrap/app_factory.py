@@ -17,6 +17,7 @@ from app.bootstrap.persistence import (
     build_session_factory,
     configure_persistence,
 )
+from app.bootstrap.websocket_auth import build_redis_client
 from app.config import get_settings
 from app.entrypoints.webapp.routers.invoice import router as invoice_router
 from app.entrypoints.webapp.routers.workflows import router as wf_router
@@ -32,10 +33,14 @@ def _build_lifespan(checkpointer_backend: str):
         await configure_persistence()  # Starts ORM mappers
 
         settings = get_settings()
+        app.state.redis = build_redis_client(settings.redis_url)
         if checkpointer_backend == "memory":
             app.state.checkpointer = InMemorySaver()
             app.state.pg_pool = None
-            yield
+            try:
+                yield
+            finally:
+                await app.state.redis.aclose()
             return
 
         db_url = str(settings.db_url)
@@ -54,6 +59,7 @@ def _build_lifespan(checkpointer_backend: str):
         try:
             yield
         finally:
+            await app.state.redis.aclose()
             await lg_pool.close()
             await app_pool.close()
             await engine.dispose()

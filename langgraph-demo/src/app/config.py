@@ -17,6 +17,12 @@ class Settings(BaseSettings):
     env: str = "prod"
     tavily_api_key: str = ""
     gemini_api_key: SecretStr
+    redis_url: str = "redis://redis:6379/0"
+    ws_ticket_ttl_seconds: int = Field(default=30, ge=1)
+    auth_access_token_secret: SecretStr = SecretStr("dev-only-change-me")
+    auth_access_token_algorithm: str = "HS256"
+    auth_access_token_audience: str | None = None
+    auth_access_token_issuer: str | None = None
 
 
 # settings = Settings()

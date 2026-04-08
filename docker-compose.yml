@@ -26,10 +26,29 @@ services:
       DB_PASS: ${POSTGRES_PASSWORD}
       DB_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
       DB_URL_SQLALCHEMY: postgresql+psycopg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@psdb:5432/${POSTGRES_DB}
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379/0}
+      WS_TICKET_TTL_SECONDS: ${WS_TICKET_TTL_SECONDS:-30}
+      AUTH_ACCESS_TOKEN_SECRET: ${AUTH_ACCESS_TOKEN_SECRET:-dev-only-change-me}
+      AUTH_ACCESS_TOKEN_ALGORITHM: ${AUTH_ACCESS_TOKEN_ALGORITHM:-HS256}
+      AUTH_ACCESS_TOKEN_AUDIENCE: ${AUTH_ACCESS_TOKEN_AUDIENCE:-}
+      AUTH_ACCESS_TOKEN_ISSUER: ${AUTH_ACCESS_TOKEN_ISSUER:-}
 
     depends_on:
       psdb:
         condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  redis:
+    image: redis:7.4.7-alpine
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
 
   psdb:
     image: postgres:18.1-bookworm

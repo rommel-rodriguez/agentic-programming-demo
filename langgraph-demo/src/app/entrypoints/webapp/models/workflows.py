@@ -7,6 +7,10 @@ class LGQuery(BaseModel):
     result: str
 
 
+class WSTicketOut(BaseModel):
+    ticket: str
+
+
 class ChatIn(BaseModel):
     type_: Literal["chat.message"]
     thread_id: str

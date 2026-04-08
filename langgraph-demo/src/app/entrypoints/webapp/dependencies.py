@@ -5,7 +5,13 @@ from app.bootstrap.services import (
     build_query_agent_with_search,
     build_register_attachment_use_case,
 )
+from app.bootstrap.websocket_auth import (
+    build_access_token_verifier,
+    build_websocket_ticket_service,
+    build_websocket_ticket_store,
+)
 from app.ports.agents import QueryAgent
+from app.services.websocket_auth import WebSocketTicketService
 
 
 def get_langgraph_db_pool(request: Request):
@@ -24,6 +30,10 @@ def get_checkpointer(request: Request):
     return request.app.state.checkpointer
 
 
+def get_redis(request: Request):
+    return request.app.state.redis
+
+
 # TODO: Create a different DB Pool and replace the dependency with that pool
 # in order other db operations not to use the same pool LangGraph is using
 # which might have settings not apt for every use case.
@@ -39,3 +49,14 @@ def get_query_agent_with_search(
     checkpointer=Depends(get_checkpointer),
 ) -> QueryAgent:
     return build_query_agent_with_search(checkpointer=checkpointer)
+
+
+def get_websocket_ticket_service(
+    redis=Depends(get_redis),
+) -> WebSocketTicketService:
+    ticket_store = build_websocket_ticket_store(redis)
+    access_token_verifier = build_access_token_verifier()
+    return build_websocket_ticket_service(
+        ticket_store=ticket_store,
+        access_token_verifier=access_token_verifier,
+    )

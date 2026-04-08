@@ -13,9 +13,13 @@ from fastapi import (
 )
 from pydantic import ValidationError
 
-from app.entrypoints.webapp.dependencies import get_query_agent_with_search
-from app.entrypoints.webapp.models.workflows import ChatIn, ChatOut, LGQuery
+from app.entrypoints.webapp.dependencies import (
+    get_query_agent_with_search,
+    get_websocket_ticket_service,
+)
+from app.entrypoints.webapp.models.workflows import ChatIn, ChatOut, LGQuery, WSTicketOut
 from app.ports.agents import QueryAgent, RunQueryCommand
+from app.services.websocket_auth import WebSocketTicketService
 
 logger = logging.getLogger(__name__)
 
@@ -41,14 +45,18 @@ async def query_lgmodel(
 
 
 @router.websocket("/ws")
-async def chat_websocket(websocket: WebSocket):
+async def chat_websocket(
+    websocket: WebSocket,
+    ticket_service: WebSocketTicketService = Depends(get_websocket_ticket_service),
+    agent: QueryAgent = Depends(get_query_agent_with_search),
+):
     ticket = websocket.query_params.get("ticket")
     if not ticket:
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION, reason="Missing ticket"
         )
 
-    principal = verify_ws_ticket(ticket)
+    principal = await ticket_service.consume(ticket)
     if not principal:
         raise WebSocketException(
             code=status.WS_1008_POLICY_VIOLATION, reason="Invalid ticket"
@@ -88,26 +96,28 @@ async def chat_websocket(websocket: WebSocket):
                 type_="chat.reply",
                 thread_id=msg.thread_id,
                 message_id=msg.message_id,
-                content=f"Echo:\n{msg}",
+                content=(
+                    await agent(
+                        RunQueryCommand(query=msg.content, thread_id=msg.thread_id)
+                    )
+                ).result,
             )
             await websocket.send_json(reply.model_dump())
     except WebSocketDisconnect:
         logger.exception(f"client disconnected")
 
 
-@router.post("/wf/ws-ticket")
-async def create_ws_ticket(authorization: str | None = Header(default=None)):
+@router.post("/ws-ticket", response_model=WSTicketOut)
+async def create_ws_ticket(
+    authorization: str | None = Header(default=None),
+    ticket_service: WebSocketTicketService = Depends(get_websocket_ticket_service),
+):
     if not authorization or not authorization.startswith("Bearer "):
         raise HTTPException(status_code=401, detail="Missing bearer token")
 
     access_token = authorization.removeprefix("Bearer ").strip()
-    user = verify_access_token(access_token)
-    if not user:
+    ticket = await ticket_service.issue_for_access_token(access_token)
+    if not ticket:
         raise HTTPException(status_code=401, detail="Invalid bearer token")
 
-    ticket = mint_ws_ticket(
-        sub=user.user_id,
-        ttl_seconds=30,
-        single_use=True,
-    )
     return {"ticket": ticket}
