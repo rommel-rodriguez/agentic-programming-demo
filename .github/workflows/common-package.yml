@@ -1,0 +1,109 @@
+name: common-package
+
+on:
+  pull_request:
+    paths:
+      - "common/**"
+      - ".github/workflows/common-package.yml"
+  push:
+    branches:
+      - "main"
+    tags:
+      - "common-v*"
+    paths:
+      - "common/**"
+      - ".github/workflows/common-package.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: common-package-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: common
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install build and test dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . pytest pytest-asyncio build
+
+      - name: Run unit tests
+        run: python -m pytest tests/unit
+
+      - name: Build package
+        run: python -m build
+
+      - name: Upload dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: common-dist
+          path: common/dist/*
+          if-no-files-found: error
+
+  publish:
+    needs: validate
+    if: startsWith(github.ref, 'refs/tags/common-v') || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    env:
+      TWINE_USERNAME: ${{ secrets.GITLAB_PYPI_USERNAME }}
+      TWINE_PASSWORD: ${{ secrets.GITLAB_PYPI_PASSWORD }}
+      TWINE_REPOSITORY_URL: ${{ vars.GITLAB_PYPI_REPOSITORY_URL }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install publishing tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install twine
+
+      - name: Validate publish configuration
+        run: |
+          test -n "$TWINE_REPOSITORY_URL"
+          test -n "$TWINE_USERNAME"
+          test -n "$TWINE_PASSWORD"
+
+      - name: Verify tag matches package version
+        if: startsWith(github.ref, 'refs/tags/common-v')
+        working-directory: common
+        run: |
+          TAG_VERSION="${GITHUB_REF#refs/tags/common-v}"
+          PACKAGE_VERSION="$(python - <<'PY'
+          import tomllib
+          from pathlib import Path
+
+          data = tomllib.loads(Path("pyproject.toml").read_text())
+          print(data["project"]["version"])
+          PY
+          )"
+          test "$TAG_VERSION" = "$PACKAGE_VERSION"
+
+      - name: Download dist artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: common-dist
+          path: common/dist
+
+      - name: Publish to GitLab PyPI registry
+        working-directory: common
+        run: python -m twine upload --non-interactive dist/*
