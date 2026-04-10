@@ -1,0 +1,112 @@
+[build-system]
+requires = ["hatchling>=1.13"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build]
+sources = ["src"]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/app"]
+
+[project]
+name = "auth-service"
+version = "0.1.0"
+description = "Authentication microservice for issuing RS256 JWTs and exposing JWKS"
+readme = "README.md"
+license = "MIT"
+requires-python = "==3.11.*"
+dependencies = [
+    "alembic==1.17.1",
+    "bcrypt==4.2.1",
+    "fastapi[standard]==0.121.0",
+    "pydantic-settings==2.11.0",
+    "pyjwt[crypto]==2.10.1",
+    "python-json-logger==3.3.0",
+    "psycopg[binary,pool]==3.2.12",
+    "sqlalchemy[mypy]==2.0.44",
+]
+
+[dependency-groups]
+dev = [
+    "mypy==1.17.0",
+    "pre-commit==4.2.0",
+    "ruff==0.12.5",
+    { include-group = "test" },
+]
+test = [
+    "aiosqlite>=0.22,<0.23",
+    "httpx==0.28.1",
+    "pytest==8.4.1",
+    "pytest-asyncio==1.1.0",
+]
+
+[tool.mypy]
+files = ["src", "tests"]
+strict = true
+ignore_missing_imports = true
+allow_subclassing_any = true
+disallow_untyped_defs = false
+plugins = ["pydantic.mypy"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_default_fixture_loop_scope = "function"
+
+[tool.ruff]
+line-length = 88
+preview = true
+
+[tool.ruff.format]
+skip-magic-trailing-comma = false
+
+[tool.ruff.lint]
+select = [
+    "A",
+    "ARG",
+    "ASYNC",
+    "B",
+    "C4",
+    "DTZ",
+    "E",
+    "F",
+    "FLY",
+    "I",
+    "N",
+    "PERF",
+    "PL",
+    "PT",
+    "PTH",
+    "Q",
+    "RET",
+    "RSE",
+    "RUF",
+    "S",
+    "SIM",
+    "SLOT",
+    "TID",
+    "UP",
+    "W",
+]
+ignore = [
+    "N818",
+    "PLR0913",
+    "PLR0917",
+    "PLR6301",
+    "PTH123",
+    "TC001",
+    "TC002",
+    "TC003",
+    "TC006",
+    "UP015",
+]
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+force-wrap-aliases = true
+split-on-trailing-comma = true
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = [
+    "S101",
+    "S106",
+]
