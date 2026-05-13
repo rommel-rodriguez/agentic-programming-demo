@@ -15,7 +15,7 @@ description = "Didactic prototype to learn FastAPI using DDD and CA principles"
 readme = "README.md"
 license = "MIT"
 authors = [
-    { name = "Ivan Borovets", email = "ivan.r.borovets@gmail.com" },
+    { name = "Rommel Rodriguez", email = "rommelrodperez@gmail.com" },
 ]
 requires-python = "==3.11.*"
 dependencies = [
