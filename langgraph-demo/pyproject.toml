@@ -199,3 +199,12 @@ strict-imports = true
 exclude-modules = '''
 ^app\.infrastructure\.persistence_sqla\.alembic
 '''
+
+[[tool.uv.index]]
+name = "gitlab"
+# url = "https://gitlab.example.com/api/v4/groups/<group-id>/-/packages/pypi/simple"
+url = "https://gitlab.com/api/v4/projects/81141595/packages/pypi/simple"
+explicit = true
+
+[tool.uv.sources]
+common = { index = "gitlab" }
