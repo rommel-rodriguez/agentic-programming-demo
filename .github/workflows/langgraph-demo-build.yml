@@ -1,0 +1,66 @@
+name: langgraph-demo-build
+
+on:
+  pull_request:
+    paths:
+      - "langgraph-demo/**"
+      - ".github/workflows/langgraph-demo-build.yml"
+  push:
+    branches:
+      - "main"
+    paths:
+      - "langgraph-demo/**"
+      - ".github/workflows/langgraph-demo-build.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: langgraph-demo-build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}-langgraph-demo
+          tags: |
+            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
+            type=sha,format=short,prefix=sha-
+
+      - name: Log in to registry
+        if: github.event_name != 'pull_request'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build production image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./langgraph-demo
+          file: ./langgraph-demo/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          build-args: |
+            APP_ENV=prod
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          secrets: |
+            gitlab_user=${{ secrets.GITLAB_PYPI_USERNAME }}
+            gitlab_password=${{ secrets.GITLAB_PYPI_PASSWORD }}
