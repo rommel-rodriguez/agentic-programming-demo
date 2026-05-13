@@ -19,6 +19,7 @@ authors = [
 ]
 requires-python = "==3.11.*"
 dependencies = [
+    "common==0.1.0",
     "alembic==1.17.1",
     "alembic-postgresql-enum==1.8.0",
     "bcrypt==4.2.1",
