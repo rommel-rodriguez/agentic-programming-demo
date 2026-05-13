@@ -15,10 +15,11 @@ description = "Didactic prototype to learn FastAPI using DDD and CA principles"
 readme = "README.md"
 license = "MIT"
 authors = [
-    { name = "Ivan Borovets", email = "ivan.r.borovets@gmail.com" },
+    { name = "Rommel Rodriguez", email = "rommelrodperez@gmail.com" },
 ]
 requires-python = "==3.11.*"
 dependencies = [
+    "common==0.1.0",
     "alembic==1.17.1",
     "alembic-postgresql-enum==1.8.0",
     "bcrypt==4.2.1",
@@ -199,3 +200,12 @@ strict-imports = true
 exclude-modules = '''
 ^app\.infrastructure\.persistence_sqla\.alembic
 '''
+
+[[tool.uv.index]]
+name = "gitlab"
+# url = "https://gitlab.example.com/api/v4/groups/<group-id>/-/packages/pypi/simple"
+url = "https://gitlab.com/api/v4/projects/81141595/packages/pypi/simple"
+explicit = true
+
+[tool.uv.sources]
+common = { index = "gitlab" }
